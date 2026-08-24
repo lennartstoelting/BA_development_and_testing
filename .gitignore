@@ -1,0 +1,54 @@
+# ==========================================
+# Environments & Virtual Envs
+# ==========================================
+.venv/
+venv/
+ENV/
+env/
+
+# ==========================================
+# Python Bytecode & Cache
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+.ipynb_checkpoints/
+
+# ==========================================
+# Large Datasets, Models, & Heavy Files
+# ==========================================
+*.onnx
+*.engine
+*.tflite
+*.pth
+*.pt
+*.bin
+*.pkl
+*.dill
+*.mp4
+*.webm
+*.avi
+*.task
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.*
+*.pem
+*.key
+
+# ==========================================
+# IDE & System Files
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ==========================================
+
+# Excludes a folder only at the exact root level of your project
+/lab_recordings/
