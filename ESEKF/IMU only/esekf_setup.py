@@ -4,37 +4,40 @@ import matplotlib.pyplot as plt
 from scipy import constants
 
 
-def input_file_selection():
-    path_prefix = "../csv_files_of_neon_recordings/"
-    input_files = [
-        "imu_2+ min of no motion.csv",
-        "imu_1 min static with one moving person.csv",
-        "imu_Moving camera + moving person.csv",
-        "imu_Narural head movement with person in the scene.csv",
-        "imu_Static camera, person with tiny movement.csv",
-    ]
-    full_input_path = lambda index=0: path_prefix + input_files[index]
+import os
 
-    # ---
+
+def input_file_selection():
+    folder_path = "../csv_files_of_neon_recordings/"
+    try:
+        input_files = [f for f in os.listdir(folder_path) if f.endswith(".csv")]
+        input_files.sort()
+    except FileNotFoundError:
+        print(f"Error: The directory '{folder_path}' does not exist.")
+        return None
+
+    if not input_files:
+        print("No CSV files found in the directory.")
+        return None
 
     print("The following IMU data files are available:\n")
     for index, file in enumerate(input_files):
         print(f"{index} - {file}")
+
     selected_index_input = input("\nPlease select the input file by typing its index: ")
 
-    default_message = f'-> Defaulting to index 0, reading file "{input_files[0]}"...'
     try:
         selected_id = int(selected_index_input)
+        if 0 <= selected_id < len(input_files):
+            file_name = input_files[selected_id]
+            print(f'Index provided, reading file "{file_name}"...')
+            return os.path.join(folder_path, file_name)
     except ValueError:
-        print(f"The chosen index could not be converted to integer.\n{default_message}")
-        return full_input_path(0)
+        pass
 
-    if selected_id < 0 or selected_id >= len(input_files):
-        print(f"The chosen index is negative or too large.\n{default_message}")
-        return full_input_path(0)
-
-    print(f'Index provided, reading file "{input_files[selected_id]}"...')
-    return full_input_path(selected_id)
+    default_file = input_files[0]
+    print(f'Invalid selection. Defaulting to index 0, reading file "{default_file}"...')
+    return os.path.join(folder_path, default_file)
 
 
 def main():
@@ -63,7 +66,7 @@ def main():
     start_time = imu_data["timestamp [ns]"].iloc[0]
     previous_time = start_time
 
-    # esekf = Filter(calibration_samples, imu_data)
+    esekf = Filter(calibration_samples, imu_data)
 
     for index, row in imu_data.iterrows():
 
