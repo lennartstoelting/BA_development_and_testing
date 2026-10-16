@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import constants
 import pandas as pd
 import dill
 

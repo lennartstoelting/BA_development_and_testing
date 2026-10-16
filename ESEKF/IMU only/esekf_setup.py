@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from scipy import constants
 import os
 
 from esekf_class import Filter
 
-# length of timewindow at the start for IMU calibration in seconds
-calibration_dt = 3
+gravity_constant = 9.80665  # taken from scipy.constants.g
+calibration_dt = 3  # length of timewindow at the start for IMU calibration in seconds
 
 
 def input_file_selection():
@@ -88,7 +86,7 @@ def main():
                 row["acceleration z [g]"],
             ]
         )
-        a_tilde = accel_in_g * constants.g
+        a_tilde = accel_in_g * gravity_constant
         gyro_in_deg = np.array(
             [row["gyro x [deg/s]"], row["gyro y [deg/s]"], row["gyro z [deg/s]"]]
         )
