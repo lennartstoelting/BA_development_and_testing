@@ -17,24 +17,30 @@ class Filter:
 
         self.x = None
         self.P = None
-        self.Q = None  # can be initialized right away from the esekf_funcs
-        self.J = None  # same here, pobably very simple since no input
-        self.V = None  # same here
+        self.Q = None
+        self.J = None  # can be initialized right away from the esekf_funcs
+        self.W = None
 
-        # TODO this is where I will initialize the array that save each state
+        # this is only to test the basic functionality.
+        # Since I will not have it always be the case that there is zero speakers and the only measurement is gravity,
+        # I need to construct the matrices individually but also ideally automatically
+        self._initialize_error_state_covariance_matrix_P()
+        self._initialize_process_noise_covariance_matrix_Q()
+        self._initialize_process_noise_jacobian_matrix_J()
+        self._initialize_measurement_noise_covariance_matrix_W()
+
+        # TODO this is where I will initialize the array that saves each state
         # for plotting and evaluation later
 
     def calibration_step(self, accel_in_g, omega_tilde, elapsed_time):
         self.accel_calibration_buffer.append(accel_in_g)
         self.gyro_calibration_buffer.append(omega_tilde)
 
+        # keep calibarting if we are not over the calibration time window
         if elapsed_time < self.calibration_dt:
             return
 
         self._initialize_state_x()
-        # self._initialize_state_covariance_matrix_P()
-        # self._initialize_process_noise_covariance_matrix_Q()
-        # self._initialize_measurement_noise_covariance_matrix_R()
 
         self.calibration_complete = True
         print(
@@ -47,29 +53,72 @@ class Filter:
         self.gyro_calibration_buffer = []
 
     def _initialize_state_x(self):
-        # initial position and velocity
+        # calibration data
+        accel_array = np.array(self.accel_calibration_buffer)
+        gyro_array = np.array(self.gyro_calibration_buffer)
+
+        mean_accel = np.mean(accel_array, axis=0)
+        mean_gyro = np.mean(gyro_array, axis=0)
+
+        # position and velocity
         p_init = np.zeros(3)
         v_init = np.zeros(3)
 
-        # initial orientation
-        accel_array = np.array(self.accel_calibration_buffer)
-        mean_accel = np.mean(accel_array, axis=0)
-
+        # orientation
         gravity_in_g = np.array([0.0, 0.0, 1.0])
         qw_init = 1.0 + np.dot(self.normalized(mean_accel), gravity_in_g)
         qx_init, qy_init, qz_init = np.cross(self.normalized(mean_accel), gravity_in_g)
 
         q_init = self.normalized([qw_init, qx_init, qy_init, qz_init])
 
-        # initial accel bias
+        # accel bias
         a_b_init = mean_accel - self.normalized(mean_accel)
 
-        # initial gyro bias
-        gyro_array = np.array(self.gyro_calibration_buffer)
-        mean_gyro = np.mean(gyro_array, axis=0)
+        # gyro bias
         omega_b_init = mean_gyro
 
         self.x = np.array([*p_init, *v_init, *q_init, *a_b_init, *omega_b_init])
+
+    def _initialize_error_state_covariance_matrix_P(self):
+        # for now, these values are trial and error
+        # (low number -> low variance -> high certainty)
+        initial_certainties = {
+            "position": 1e-10,
+            "velocity": 1e-10,
+            "orientation": 1e-7,
+            "accel_bias": 1e-5,
+            "gyro_bias": 1e-5,
+        }
+
+        state_order = ["position", "velocity", "orientation", "accel_bias", "gyro_bias"]
+        self.P = np.diag(
+            np.repeat([initial_certainties[key] for key in state_order], 3)
+        )
+
+    def _initialize_process_noise_covariance_matrix_Q(self):
+        process_noise = {
+            "velocity": 1e-5,
+            "orientation": 1e-5,
+            "accel_bias": 1e-5,
+            "gyro_bias": 1e-5,
+        }
+
+        process_noise_order = ["velocity", "orientation", "accel_bias", "gyro_bias"]
+        self.Q = np.diag(
+            np.repeat([process_noise[key] for key in process_noise_order], 3)
+        )
+
+    def _initialize_measurement_noise_covariance_matrix_W(self):
+        measurement_noise = {"accel_gravity": 1e-3}
+
+        measurement_noise_order = ["accel_gravity"]
+
+        self.W = np.diag(
+            np.repeat([measurement_noise[key] for key in measurement_noise_order], 3)
+        )
+
+    def _initialize_process_noise_jacobian_matrix_J(self):
+        self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
 
     def prediction_step(self):
         # I originally called the lambdified functions here with the neccessary arguments
