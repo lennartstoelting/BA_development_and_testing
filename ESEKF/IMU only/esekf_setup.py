@@ -7,6 +7,25 @@ from esekf_class import Filter
 gravity_constant = 9.80665  # taken from scipy.constants.g
 calibration_dt = 3  # length of timewindow at the start for IMU calibration in seconds
 
+output_columns = [
+    "p_x",
+    "p_y",
+    "p_z",
+    "v_x",
+    "v_y",
+    "v_z",
+    "q_w",
+    "q_x",
+    "q_y",
+    "q_z",
+    "a_b_x",
+    "a_b_y",
+    "a_b_z",
+    "omega_b_x",
+    "omega_b_y",
+    "omega_b_z",
+]
+
 
 def input_file_selection():
     folder_path = "../csv_files_of_neon_recordings/"
@@ -61,6 +80,7 @@ def main():
             "quaternion y",
             "quaternion z",
             "quaternion w",
+            "recording id",
         ],
         axis=1,
         errors="ignore",
@@ -70,13 +90,12 @@ def main():
     # this is technically not correct but for now, I am not using previous_time until the calibration is finished so there is no conflict for now
     previous_time = start_time
 
-    esekf = Filter(calibration_dt)
-
+    esekf = Filter(imu_data, calibration_dt)
     for index, row in imu_data.iterrows():
 
         # prepare inputs
         current_time = row["timestamp [ns]"] / 1e9
-        delta_t = current_time - previous_time
+        dt = current_time - previous_time
         elapsed_time = current_time - start_time
 
         accel_in_g = np.array(
@@ -87,6 +106,7 @@ def main():
             ]
         )
         a_tilde = accel_in_g * gravity_constant
+
         gyro_in_deg = np.array(
             [row["gyro x [deg/s]"], row["gyro y [deg/s]"], row["gyro z [deg/s]"]]
         )
@@ -94,7 +114,18 @@ def main():
 
         if not esekf.calibration_complete:
             esekf.calibration_step(accel_in_g, omega_tilde, elapsed_time)
+            continue
+
+        esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
+        # print(f"state at loop index {index}:\n{esekf.x}")
+        esekf.state_history.append(np.append(esekf.x.copy(), elapsed_time))
+        esekf.input_and_state_history.iloc[
+            index, esekf.input_and_state_history.columns.get_indexer(output_columns)
+        ] = esekf.x.flatten()
+
         previous_time = current_time
+
+    esekf.plot_data()
 
 
 if __name__ == "__main__":

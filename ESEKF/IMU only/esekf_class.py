@@ -2,23 +2,41 @@ import numpy as np
 import pandas as pd
 import dill
 
+from esekf_plot import *
+
+
 folder_path = "../notebook theory/"
 with open(f"{folder_path}filter_funcs_IMU_only.pkl", "rb") as f:
     esekf_funcs = dill.load(f)
 
 
-class Filter:
-    def __init__(self, calibration_dt=3):
-        self.calibration_dt = calibration_dt
-        self.calibration_complete = False
+output_columns = [
+    "p_x",
+    "p_y",
+    "p_z",
+    "v_x",
+    "v_y",
+    "v_z",
+    "q_w",
+    "q_x",
+    "q_y",
+    "q_z",
+    "a_b_x",
+    "a_b_y",
+    "a_b_z",
+    "omega_b_x",
+    "omega_b_y",
+    "omega_b_z",
+]
 
-        self.accel_calibration_buffer = []
-        self.gyro_calibration_buffer = []
+
+class Filter:
+    def __init__(self, imu_data, calibration_dt=3):
 
         self.x = None
         self.P = None
         self.Q = None
-        self.J = None  # can be initialized right away from the esekf_funcs
+        self.J = None
         self.W = None
 
         # this is only to test the basic functionality.
@@ -28,26 +46,38 @@ class Filter:
         self._initialize_process_noise_covariance_matrix_Q()
         self._initialize_process_noise_jacobian_matrix_J()
         self._initialize_measurement_noise_covariance_matrix_W()
+        # process noise jacobian matrix is only needed because not every error state kinematic has added noise
+        # for now, all measurement noise has added noise for every aspect until decided differently
 
-        # TODO this is where I will initialize the array that saves each state
-        # for plotting and evaluation later
+        self.calibration_dt = calibration_dt
+        self.calibration_complete = False
+
+        self.accel_calibration_buffer = []
+        self.gyro_calibration_buffer = []
+
+        self.state_history = []
+        self.input_and_state_history = imu_data
+        self.input_and_state_history.loc[:, output_columns] = None
+
+        # wie sieht diese csv denn aus?
+        self.input_and_state_history.to_csv("test_output.csv", index=False)
 
     def calibration_step(self, accel_in_g, omega_tilde, elapsed_time):
         self.accel_calibration_buffer.append(accel_in_g)
         self.gyro_calibration_buffer.append(omega_tilde)
 
-        # keep calibarting if we are not over the calibration time window
         if elapsed_time < self.calibration_dt:
+            # keep calibarting if we are not over the calibration time window
             return
 
         self._initialize_state_x()
 
         self.calibration_complete = True
-        print(
-            f"\nCalibration ended after {elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
-        )
-        for i in self.x:
-            print(i)
+        # print(
+        #     f"\nCalibration ended after {elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
+        # )
+        # for i in self.x:
+        #     print(i)
 
         self.accel_calibration_buffer = []
         self.gyro_calibration_buffer = []
@@ -120,13 +150,50 @@ class Filter:
     def _initialize_process_noise_jacobian_matrix_J(self):
         self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
 
-    def prediction_step(self):
+    def prediction_step(self, a_tilde, omega_tilde, gravity_constant, dt):
+        f_x_IMU = esekf_funcs["f_x_IMU"](
+            *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
+        ).flatten()
+        # list(q) + list(a_b) + list(omega_b) + list(u_tilde) + [dt]
+        F_IMU = esekf_funcs["F_delta_x"](*self.x[6:16], *a_tilde, *omega_tilde, dt)
+
+        self.x = f_x_IMU
+        self.x[6:10] = self.normalized(self.x[6:10])
+
+        self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
         # I originally called the lambdified functions here with the neccessary arguments
         # but in the ekf I didn't have all the kinematics modeled, only for the orientation_certainty
         # and then I did the vector multiplication in code like this
         # self.P = A @ self.P @ A.T + self.Q
         # probably actually smart because it is after all only multiplication and some transposes
-        pass
+
+    # def plot_data(self):
+    #     if not self.state_history:
+    #         print("No states to save.")
+    #         return
+
+    #     df = pd.DataFrame(
+    #         self.input_and_state_history, columns=output_columns + ["time"]
+    #     )
+    #     df.to_csv("IMU_input_and_states_over_time.csv")
+
+    #     pyplot_input_and_state_grid(
+    #         "IMU_input_and_states_over_time.csv", "placeholder title"
+    #     )
+
+    def plot_data(self):
+        if not self.state_history:
+            print("No states to save.")
+            return
+
+        # Save the complete history (inputs + estimated states) directly
+        self.input_and_state_history.to_csv(
+            "IMU_input_and_states_over_time.csv", index=False
+        )
+
+        pyplot_input_and_state_grid(
+            "IMU_input_and_states_over_time.csv", "placeholder title"
+        )
 
     def correction_step(self):
         # only to be implemented when I have succesfully done the prediction step to a satisfactory level
