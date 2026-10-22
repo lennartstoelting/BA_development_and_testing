@@ -60,11 +60,9 @@ def pyplot_state_grid(output_file_name, input_file_name):
     plt.show()
 
 
-def pyplot_input_and_state_grid(output_file_name, input_file_name):
+def pyplot_input_and_state_grid(output_file_name, output_columns, input_file_name):
     df = pd.read_csv(output_file_name)
-
-    # Convert nanoseconds to relative seconds starting at 0
-    time = (df["timestamp [ns]"].values - df["timestamp [ns]"].iloc[0]) / 1e9
+    time = df["time"].values
 
     # Pre-calculate Euler angles
     quats_df = df[["q_x", "q_y", "q_z", "q_w"]].copy()
@@ -89,15 +87,15 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     fig.suptitle(input_file_name)
 
     # Row 0: Accelerometer, Gyro
-    axs[0, 0].plot(time, df["acceleration x [g]"], label="ax", color="red")
-    axs[0, 0].plot(time, df["acceleration y [g]"], label="ay", color="green")
-    axs[0, 0].plot(time, df["acceleration z [g]"], label="az", color="blue")
+    axs[0, 0].plot(time, df["a_tilde_x"], label="ax", color="red")
+    axs[0, 0].plot(time, df["a_tilde_y"], label="ay", color="green")
+    axs[0, 0].plot(time, df["a_tilde_z"], label="az", color="blue")
     axs[0, 0].set_ylabel("accel (m/s^2)")
     axs[0, 0].set_title("Accelerometer")
 
-    axs[0, 1].plot(time, df["gyro x [deg/s]"], label="gx", color="red")
-    axs[0, 1].plot(time, df["gyro y [deg/s]"], label="gy", color="green")
-    axs[0, 1].plot(time, df["gyro z [deg/s]"], label="gz", color="blue")
+    axs[0, 1].plot(time, df["omega_tilde_x"], label="gx", color="red")
+    axs[0, 1].plot(time, df["omega_tilde_y"], label="gy", color="green")
+    axs[0, 1].plot(time, df["omega_tilde_z"], label="gz", color="blue")
     axs[0, 1].set_ylabel("gyro (rad/s)")
     axs[0, 1].set_title("Gyroscope")
 

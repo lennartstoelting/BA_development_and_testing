@@ -19,25 +19,6 @@ unused_columns_in_recordings = [
     "recording id",
 ]
 
-output_columns = [
-    "p_x",
-    "p_y",
-    "p_z",
-    "v_x",
-    "v_y",
-    "v_z",
-    "q_w",
-    "q_x",
-    "q_y",
-    "q_z",
-    "a_b_x",
-    "a_b_y",
-    "a_b_z",
-    "omega_b_x",
-    "omega_b_y",
-    "omega_b_z",
-]
-
 
 def input_file_selection():
     try:
@@ -93,7 +74,7 @@ def main():
 
     start_time = imu_data["timestamp [ns]"].iloc[0] / 1e9  # nanoseconds to seconds
     previous_time = start_time  # previous_time is irrelevant in calibration steps
-    esekf = Filter(imu_data, calibration_dt)
+    esekf = Filter(calibration_dt)
 
     for index, row in imu_data.iterrows():
         # prepare inputs
@@ -118,18 +99,17 @@ def main():
         esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
 
         # save state history
-        esekf.state_history.append(np.append(esekf.x.copy(), elapsed_time))
-
-        # das hier ist gerade so der große Punkt, Ich will das nicht in dem bereits bestehenden array an die richtige Stelle machen sondern so wie bei der nur state history das immer im loop machen
-        # einziges Problem da ist, das der loop ja schon früher continued wird, das sollte ich also beachten.
-        esekf.input_and_state_history.iloc[
-            index, esekf.input_and_state_history.columns.get_indexer(output_columns)
-        ] = esekf.x.flatten()
+        esekf.state_history.append(
+            np.append(esekf.x.copy(), elapsed_time)
+        )  # das erste hier ist wahrscheinlich langfristig überfällig aber ich lasse es fürs erste mal hier stehen
+        esekf.input_and_state_history.append(
+            np.hstack([esekf.x.copy(), a_tilde, omega_tilde, elapsed_time])
+        )
 
         # prepare for next iteration
         previous_time = current_time
 
-    esekf.plot_data()
+    esekf.plot_data(input_file_path)
 
 
 if __name__ == "__main__":

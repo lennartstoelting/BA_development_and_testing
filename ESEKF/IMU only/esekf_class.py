@@ -27,11 +27,18 @@ output_columns = [
     "omega_b_x",
     "omega_b_y",
     "omega_b_z",
+    "a_tilde_x",
+    "a_tilde_y",
+    "a_tilde_z",
+    "omega_tilde_x",
+    "omega_tilde_y",
+    "omega_tilde_z",
+    "time",
 ]
 
 
 class Filter:
-    def __init__(self, imu_data, calibration_dt=3):
+    def __init__(self, calibration_dt=3):
 
         self.x = None
         self.P = None
@@ -56,11 +63,7 @@ class Filter:
         self.gyro_calibration_buffer = []
 
         self.state_history = []
-        self.input_and_state_history = imu_data
-        self.input_and_state_history.loc[:, output_columns] = None
-
-        # wie sieht diese csv denn aus?
-        self.input_and_state_history.to_csv("test_output.csv", index=False)
+        self.input_and_state_history = []
 
     def calibration_step(self, accel_in_g, omega_tilde, elapsed_time):
         self.accel_calibration_buffer.append(accel_in_g)
@@ -167,32 +170,17 @@ class Filter:
         # self.P = A @ self.P @ A.T + self.Q
         # probably actually smart because it is after all only multiplication and some transposes
 
-    # def plot_data(self):
-    #     if not self.state_history:
-    #         print("No states to save.")
-    #         return
-
-    #     df = pd.DataFrame(
-    #         self.input_and_state_history, columns=output_columns + ["time"]
-    #     )
-    #     df.to_csv("IMU_input_and_states_over_time.csv")
-
-    #     pyplot_input_and_state_grid(
-    #         "IMU_input_and_states_over_time.csv", "placeholder title"
-    #     )
-
-    def plot_data(self):
-        if not self.state_history:
-            print("No states to save.")
+    def plot_data(self, input_file_path):
+        if not self.input_and_state_history:
+            print("Combined history of inputs and states is empty, can't be plotted")
             return
 
         # Save the complete history (inputs + estimated states) directly
-        self.input_and_state_history.to_csv(
-            "IMU_input_and_states_over_time.csv", index=False
-        )
+        df = pd.DataFrame(self.input_and_state_history, columns=output_columns)
+        df.to_csv("IMU_input_and_states_over_time.csv", index=False)
 
         pyplot_input_and_state_grid(
-            "IMU_input_and_states_over_time.csv", "placeholder title"
+            "IMU_input_and_states_over_time.csv", output_columns, input_file_path
         )
 
     def correction_step(self):
