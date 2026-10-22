@@ -19,15 +19,12 @@ class Filter:
         self.J = None
         self.W = None
 
-        # this is only to test the basic functionality.
         # Since I will not have it always be the case that there is zero speakers and the only measurement is gravity,
         # I need to construct the matrices individually but also ideally automatically
         self._initialize_error_state_covariance_matrix_P()
         self._initialize_process_noise_covariance_matrix_Q()
         self._initialize_process_noise_jacobian_matrix_J()
         self._initialize_measurement_noise_covariance_matrix_W()
-        # process noise jacobian matrix is only needed because not every error state kinematic has added noise
-        # for now, all measurement noise has added noise for every aspect until decided differently
 
         self.calibration_dt = calibration_dt
         self.calibration_complete = False
@@ -129,16 +126,34 @@ class Filter:
         self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
 
     def prediction_step(self, a_tilde, omega_tilde, gravity_constant, dt):
-        f_x_IMU = esekf_funcs["f_x_IMU"](
+        self.x = esekf_funcs["f_x_IMU"](
             *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
         ).flatten()
-        # list(q) + list(a_b) + list(omega_b) + list(u_tilde) + [dt]
-        F_IMU = esekf_funcs["F_delta_x"](*self.x[6:16], *a_tilde, *omega_tilde, dt)
-
-        self.x = f_x_IMU
         self.x[6:10] = self.normalized(self.x[6:10])
 
+        # hier ist die Frage ob ich das vorher mache oder nachher? Also
+        F_IMU = esekf_funcs["F_delta_x"](*self.x[6:16], *a_tilde, *omega_tilde, dt)
+
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
+
+    def correction_step(self, a_tilde, gravity_constant):
+        H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
+        h = esekf_funcs["h"](*self.x[6:10], *self.x[10:13], gravity_constant).flatten()
+
+        try:
+            K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
+        except np.linalg.LinAlgError:
+            print(f"x.shape: {self.x.shape}")
+            print(f"P.shape: {self.P.shape}")
+            print(f"H.shape: {H.shape}")
+            print(f"W.shape: {self.W.shape}")
+            S = H @ self.P @ H.T + self.W
+            print("Determinant of S:", np.linalg.det(S))
+            print(f"P matrix: {self.P}")
+        delta_x = K @ (a_tilde - h)
+        self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
+        self.x[6:10] = self.normalized(self.x[6:10])
+        self.P = (np.eye(15) - K @ H) @ np.linalg.inv(self.P)
 
     def plot_data(self, input_file_path, output):
         if not self.input_and_state_history:
@@ -176,10 +191,6 @@ class Filter:
         df.to_csv(output, index=False)
 
         pyplot_input_and_state_grid(output, input_file_path)
-
-    def correction_step(self):
-        # only to be implemented when I have succesfully done the prediction step to a satisfactory level
-        pass
 
     @staticmethod
     def normalized(vec):
