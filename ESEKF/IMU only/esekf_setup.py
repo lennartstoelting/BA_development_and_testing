@@ -19,6 +19,8 @@ unused_columns_in_recordings = [
     "recording id",
 ]
 
+state_history_output = "IMU_input_and_states_over_time.csv"
+
 
 def input_file_selection():
     try:
@@ -84,32 +86,35 @@ def main():
         dt = current_time - previous_time
 
         accel_in_g = np.array([row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
-        gyro_in_deg = np.array([row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
+        gyro_in_deg_s = np.array([row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
 
         # unit conversion
         a_tilde = accel_in_g * gravity_constant
-        omega_tilde = gyro_in_deg * (np.pi / 180.0)
+        omega_tilde = gyro_in_deg_s * (np.pi / 180.0)
 
         # calibration
         if not esekf.calibration_complete:
             esekf.calibration_step(accel_in_g, omega_tilde, elapsed_time)
+            esekf.input_and_state_history.append(
+                np.hstack([None, a_tilde, omega_tilde, elapsed_time])
+            )
             continue
 
         # filter is running
         esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
+        esekf.correction_step()
 
         # save state history
-        esekf.state_history.append(
-            np.append(esekf.x.copy(), elapsed_time)
-        )  # das erste hier ist wahrscheinlich langfristig überfällig aber ich lasse es fürs erste mal hier stehen
         esekf.input_and_state_history.append(
-            np.hstack([esekf.x.copy(), a_tilde, omega_tilde, elapsed_time])
+            np.hstack([esekf.x.copy(), accel_in_g, gyro_in_deg_s, elapsed_time])
         )
 
         # prepare for next iteration
         previous_time = current_time
 
-    esekf.plot_data(input_file_path)
+    esekf.plot_data(
+        input_file_path.replace(recordings_folder_path, ""), state_history_output
+    )
 
 
 if __name__ == "__main__":

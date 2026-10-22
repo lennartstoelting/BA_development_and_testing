@@ -5,36 +5,9 @@ import dill
 from esekf_plot import *
 
 
-folder_path = "../notebook theory/"
-with open(f"{folder_path}filter_funcs_IMU_only.pkl", "rb") as f:
+theory_folder_path = "../notebook theory/"
+with open(f"{theory_folder_path}filter_funcs_IMU_only.pkl", "rb") as f:
     esekf_funcs = dill.load(f)
-
-
-output_columns = [
-    "p_x",
-    "p_y",
-    "p_z",
-    "v_x",
-    "v_y",
-    "v_z",
-    "q_w",
-    "q_x",
-    "q_y",
-    "q_z",
-    "a_b_x",
-    "a_b_y",
-    "a_b_z",
-    "omega_b_x",
-    "omega_b_y",
-    "omega_b_z",
-    "a_tilde_x",
-    "a_tilde_y",
-    "a_tilde_z",
-    "omega_tilde_x",
-    "omega_tilde_y",
-    "omega_tilde_z",
-    "time",
-]
 
 
 class Filter:
@@ -76,11 +49,13 @@ class Filter:
         self._initialize_state_x()
 
         self.calibration_complete = True
-        # print(
-        #     f"\nCalibration ended after {elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
-        # )
-        # for i in self.x:
-        #     print(i)
+        """
+        print(
+            f"\nCalibration ended after {elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
+        )
+        for i in self.x:
+            print(i)
+        """
 
         self.accel_calibration_buffer = []
         self.gyro_calibration_buffer = []
@@ -164,24 +139,43 @@ class Filter:
         self.x[6:10] = self.normalized(self.x[6:10])
 
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
-        # I originally called the lambdified functions here with the neccessary arguments
-        # but in the ekf I didn't have all the kinematics modeled, only for the orientation_certainty
-        # and then I did the vector multiplication in code like this
-        # self.P = A @ self.P @ A.T + self.Q
-        # probably actually smart because it is after all only multiplication and some transposes
 
-    def plot_data(self, input_file_path):
+    def plot_data(self, input_file_path, output):
         if not self.input_and_state_history:
             print("Combined history of inputs and states is empty, can't be plotted")
             return
 
-        # Save the complete history (inputs + estimated states) directly
-        df = pd.DataFrame(self.input_and_state_history, columns=output_columns)
-        df.to_csv("IMU_input_and_states_over_time.csv", index=False)
-
-        pyplot_input_and_state_grid(
-            "IMU_input_and_states_over_time.csv", output_columns, input_file_path
+        df = pd.DataFrame(
+            self.input_and_state_history,
+            columns=[
+                "p_x",
+                "p_y",
+                "p_z",
+                "v_x",
+                "v_y",
+                "v_z",
+                "q_w",
+                "q_x",
+                "q_y",
+                "q_z",
+                "a_b_x",
+                "a_b_y",
+                "a_b_z",
+                "omega_b_x",
+                "omega_b_y",
+                "omega_b_z",
+                "a_tilde_x",
+                "a_tilde_y",
+                "a_tilde_z",
+                "omega_tilde_x",
+                "omega_tilde_y",
+                "omega_tilde_z",
+                "time",
+            ],
         )
+        df.to_csv(output, index=False)
+
+        pyplot_input_and_state_grid(output, input_file_path)
 
     def correction_step(self):
         # only to be implemented when I have succesfully done the prediction step to a satisfactory level
