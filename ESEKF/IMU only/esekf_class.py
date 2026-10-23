@@ -148,6 +148,7 @@ class Filter:
             print(f"H.shape: {H.shape}")
             print(f"W.shape: {self.W.shape}")
             S = H @ self.P @ H.T + self.W
+            print("Determinant of P:", np.linalg.det(self.P))
             print("Determinant of S:", np.linalg.det(S))
             print(f"P matrix: {self.P}")
         delta_x = K @ (a_tilde - h)

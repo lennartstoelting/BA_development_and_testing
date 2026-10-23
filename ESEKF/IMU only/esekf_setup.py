@@ -78,6 +78,8 @@ def main():
     previous_time = start_time  # previous_time is irrelevant in calibration steps
     esekf = Filter(calibration_dt)
 
+    temp = True
+
     sum_of_corrections_triggered = 0
     for index, row in imu_data.iterrows():
         # prepare inputs
@@ -100,30 +102,33 @@ def main():
                 np.hstack([None, a_tilde, omega_tilde, elapsed_time])
             )
             continue
+        # elif temp:
+        # temp = False
+        print(np.linalg.det(esekf.P))
 
         # filter is running
         esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
 
         # this is probably only temporary, the I just want to do a check of whether to apply a correction step
-        static_accel_threshold = 0.1
-        static_gyro_threshold = 0.1
-        accel_seems_static = (
-            np.absolute(np.linalg.norm(a_tilde - esekf.x[10:13]) - gravity_constant)
-            < static_accel_threshold
-        )
-        gyro_seems_static = (
-            np.linalg.norm(omega_tilde - esekf.x[13:16]) < static_gyro_threshold
-        )
-        if accel_seems_static and gyro_seems_static:
-            print(
-                f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
-            )
-        else:
-            print(
-                f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
-            )
-            sum_of_corrections_triggered += 1
-            esekf.correction_step(a_tilde, gravity_constant)
+        # static_accel_threshold = 0.1
+        # static_gyro_threshold = 0.1
+        # accel_seems_static = (
+        #     np.absolute(np.linalg.norm(a_tilde - esekf.x[10:13]) - gravity_constant)
+        #     < static_accel_threshold
+        # )
+        # gyro_seems_static = (
+        #     np.linalg.norm(omega_tilde - esekf.x[13:16]) < static_gyro_threshold
+        # )
+        # if accel_seems_static and gyro_seems_static:
+        #     print(
+        #         f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
+        #     )
+        # else:
+        # sum_of_corrections_triggered += 1
+        #     print(
+        #         f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
+        #     )
+        # esekf.correction_step(a_tilde, gravity_constant)
 
         # save state history
         esekf.input_and_state_history.append(
@@ -132,6 +137,7 @@ def main():
 
         # prepare for next iteration
         previous_time = current_time
+    print(f"covariance P: {np.linalg.det(esekf.P)}")
 
     print(
         f"correction step triggered {sum_of_corrections_triggered} out of {imu_data.shape[0]} times"
