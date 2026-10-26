@@ -139,6 +139,17 @@ esekf_vectors = [
             ],
         ],
         [
+            "IMU input noise",
+            "u_tilde_n",
+            r"\tilde{u}_{n}",
+            [
+                # fmt: off
+                ["IMU accelerometer noise (m/s^2)", "a_tilde_n", r"\tilde{a}_{n}", 3],
+                ["IMU gyroscope noise (rad/s)", "omega_tilde_m", r"\tilde{\omega}_{n}", 3],
+                # fmt: on
+            ],
+        ],
+        [
             "predicted maesurements",
             "h",
             r"h",
@@ -160,7 +171,7 @@ esekf_vectors = [
 # ==================
 
 
-def get_definition(target_key, target_value, node=esekf_vectors):
+def get_definition(target_value, target_key="name", node=esekf_vectors):
     """
     Recursively search the schema tree for an element matching target_key == target_value
     """
@@ -168,18 +179,18 @@ def get_definition(target_key, target_value, node=esekf_vectors):
         if node.get(target_key) == target_value:
             return node
         for val in node.values():
-            result = get_definition(target_key, target_value, val)
+            result = get_definition(target_value, target_key, val)
             if result:
                 return result
     elif isinstance(node, list):
         for item in node:
-            result = get_definition(target_key, target_value, item)
+            result = get_definition(target_value, target_key, item)
             if result:
                 return result
     return None
 
 
-def tex_sym_with_dims(tex_symbol, dim):
+def tex_with_dims(tex_symbol, dim):
     """
     adds the dimensions for each tex symbol, example:
     input: (r"p", 3), output: [r"p_{x}", r"p_{y}", r"p_{z}"]
@@ -193,12 +204,17 @@ def tex_sym_with_dims(tex_symbol, dim):
         return [tex_symbol]
     dimensions = ["x", "y", "z"] if dim == 3 else ["w", "x", "y", "z"]
     if "_" in tex_symbol:
-        return [tex_symbol[:-1] + r"," + i + r"}" for i in dimensions]
+        return [tex_symbol[:-1] + r"\," + i + r"}" for i in dimensions]
     else:
         return [tex_symbol + r"_{" + i + r"}" for i in dimensions]
 
 
-def give_components_index():
+def get_tex_vec(target_value):
+    item = get_definition(target_value)
+    return tex_with_dims(item["latex"], item["dims"])
+
+
+def add_components_index():
     for vec in esekf_vectors:
         current_index = 0
         for component in vec["components"]:
@@ -208,8 +224,28 @@ def give_components_index():
         vec["length"] = current_index
 
 
-give_components_index()
-print(get_definition("name", "Speaker error state"))
+add_components_index()
+
+
+def add_vec_sympy_matrices():
+    for vec in esekf_vectors:
+        definition = get_definition(vec["name"])
+        array = [
+            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
+        ]
+        vec["sympy array"] = sym.Matrix(sym.symbols(array))
+
+
+add_vec_sympy_matrices()
+
+
+def get_sym_subarray(array, var_name):
+    pass
+    # hier könnte ich durchs array laufen, um nur mit der Info "a_tilde" das parent item zu ermitteln, um davon dann nur das subarray zu returnen
+
+    # static: u_tilde ist hier schon vorgesetzt
+    # return sym.Matrix(u_tilde[get_definition("a_tilde", "var")["idx"]])
+
 
 # ==================
 # constants
@@ -225,10 +261,10 @@ pi = 3.141592653589793
 # system constants
 
 # \Delta p_{I \to c}
-IMU_cam_translation = [0, -0.0013, -0.00662]
+IMU_cam_translation_value = [0, -0.0013, -0.00662]
 # \Delta q_{I \to c}
 Phi_in_rad = 102 * (pi / 180)
-IMU_cam_rotation = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
+IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
 
 
 # ==================
@@ -315,3 +351,20 @@ def match_output_to_input_type(var, output):
     if isinstance(var, np.ndarray):
         return np.array(output)
     return output
+
+
+# ==================
+# generally usefull helper methods
+# ==================
+
+
+class Timer:
+    def __init__(self):
+        self.starting_time = time.time()
+        self.last_checkpoint = self.starting_time
+
+    def check(self):
+        t = time.time()
+        time_string = f"(after {t - self.last_checkpoint:.2f}s, total {t - self.starting_time:.2f}s)"
+        self.last_checkpoint = t
+        return time_string
