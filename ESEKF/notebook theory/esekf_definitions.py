@@ -68,7 +68,7 @@ esekf_vectors = [
             [
                 ["IMU position error", "delta_p", r"\delta{p}", 3],
                 ["IMU velocity error", "delta_v", r"\delta{v}", 3],
-                ["IMU orientation error", "delta_q", r"\delta{\theta}", 3],
+                ["IMU orientation error", "delta_theta", r"\delta{\theta}", 3],
                 ["IMU accel bias error", "delta_a_b", r"\delta{a}_{b}", 3],
                 ["IMU gyro bias error", "delta_omega_b", r"\delta{\omega}_{b}", 3],
             ],
@@ -112,7 +112,7 @@ esekf_vectors = [
             [
                 # fmt: off
                 ["IMU velocity error noise", "delta_v_n", r"\delta{v}_{n}", 3],
-                ["IMU orientation error noise", "delta_q_n", r"\delta{\theta}_{n}", 3],
+                ["IMU orientation error noise", "delta_theta_n", r"\delta{\theta}_{n}", 3],
                 ["IMU accel bias error noise", "delta_a_b_n", r"\delta{a}_{bn}", 3],
                 ["IMU gyro bias error noise", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
                 # fmt: on
@@ -239,12 +239,19 @@ def add_vec_sympy_matrices():
 add_vec_sympy_matrices()
 
 
-def get_sym_subarray(array, var_name):
-    pass
-    # hier könnte ich durchs array laufen, um nur mit der Info "a_tilde" das parent item zu ermitteln, um davon dann nur das subarray zu returnen
-
-    # static: u_tilde ist hier schon vorgesetzt
-    # return sym.Matrix(u_tilde[get_definition("a_tilde", "var")["idx"]])
+def get_sym_subarray(target_value, target_key="var"):
+    """
+    get sympy symbols for the components of each vector, just by inputing the variable.
+    useful because the vectors sympy matrix is only stored as one big array, getting the matching subarray is difficult
+    """
+    item = get_definition(target_value, target_key)
+    for vec in esekf_vectors:
+        res = next(
+            (c for c in vec["components"] if c == item),
+            None,
+        )
+        if res:
+            return sym.Matrix(vec["sympy array"][item["idx"]])
 
 
 # ==================
