@@ -14,6 +14,11 @@ the goal is for all files going forward to share the same definitions,
 in case aspects, naming or other concepts change later in the process
 """
 
+
+# ==================
+# dictionary of variables
+# ==================
+
 create_component = lambda name, var, tex, dims: {
     "name": name if isinstance(name, str) else None,
     "var": var if isinstance(var, str) else None,
@@ -35,60 +40,90 @@ esekf_vectors = [
     create_vector(*v)
     for v in [
         [
-            "nominal state",
-            "x",
-            r"x",
+            "IMU nominal state",
+            "x_IMU",
+            r"x_{IMU}",
             [
                 ["IMU position", "p", r"p", 3],
                 ["IMU velocity", "v", r"v", 3],
                 ["IMU orientation", "q", r"q", 4],
                 ["IMU accel bias", "a_b", r"a_{b}", 3],
                 ["IMU gyro bias", "omega_b", r"\omega_{b}", 3],
+            ],
+        ],
+        [
+            "Speaker nominal state",
+            "x_s",
+            r"x_{s}",
+            [
                 ["Speaker position", "p_s", r"p_{s}", 3],
                 ["Speaker velocity", "v_s", r"v_{s}", 3],
                 ["Speaker orientation", "q_s", r"q_{s}", 4],
             ],
         ],
         [
-            "error state",
-            "delta_x",
-            r"\delta{x}",
+            "IMU error state",
+            "delta_x_IMU",
+            r"\delta{x}_{IMU}",
             [
                 ["IMU position error", "delta_p", r"\delta{p}", 3],
                 ["IMU velocity error", "delta_v", r"\delta{v}", 3],
                 ["IMU orientation error", "delta_q", r"\delta{\theta}", 3],
                 ["IMU accel bias error", "delta_a_b", r"\delta{a}_{b}", 3],
                 ["IMU gyro bias error", "delta_omega_b", r"\delta{\omega}_{b}", 3],
+            ],
+        ],
+        [
+            "Speaker error state",
+            "delta_x_s",
+            r"\delta{x}_{s}",
+            [
                 ["Speaker position error", "delta_p_s", r"\delta{p}_{s}", 3],
                 ["Speaker velocity error", "delta_v_s", r"\delta{v}_{s}", 3],
                 ["Speaker orientation error", "delta_q_s", r"\delta{\theta}_{s}", 3],
             ],
         ],
         [
-            "true state",
-            "x_hat",
-            r"\hat{x}",
+            "IMU true state",
+            "x_hat_IMU",
+            r"\hat{x}_{IMU}",
             [
                 ["IMU position true", "p_hat", r"\hat{p}", 3],
                 ["IMU velocity true", "v_hat", r"\hat{v}", 3],
                 ["IMU orientation true", "q_hat", r"\hat{q}", 4],
                 ["IMU accel bias true", "a_hat_b", r"\hat{a}_{b}", 3],
                 ["IMU gyro bias true", "omega_hat_b", r"\hat{\omega}_{b}", 3],
+            ],
+        ],
+        [
+            "Speaker true state",
+            "x_hat_s",
+            r"\hat{x}_{s}",
+            [
                 ["Speaker position true", "p_hat_s", r"\hat{p}_{s}", 3],
                 ["Speaker velocity true", "v_hat_s", r"\hat{v}_{s}", 3],
                 ["Speaker orientation true", "q_hat_s", r"\hat{q}_{s}", 4],
             ],
         ],
         [
-            "Process noise",
-            "delta_x_n",
-            r"\delta{x}_{n}",
+            "IMU process noise",
+            "delta_x_n_IMU",
+            r"\delta{x}_{IMUn}",
             [
                 # fmt: off
                 ["IMU velocity error noise", "delta_v_n", r"\delta{v}_{n}", 3],
                 ["IMU orientation error noise", "delta_q_n", r"\delta{\theta}_{n}", 3],
                 ["IMU accel bias error noise", "delta_a_b_n", r"\delta{a}_{bn}", 3],
                 ["IMU gyro bias error noise", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
+                # fmt: on
+            ],
+        ],
+        [
+            "Speaker process noise",
+            "delta_x_n_s",
+            r"\delta{x}_{sn}",
+            [
+                # fmt: off
                 ["Speaker velocity error noise", "delta_v_s_n", r"\delta{v}_{sn}", 3],
                 ["Speaker orientation error noise", "delta_q_s_n", r"\delta{\theta}_{sn}", 3],
                 # fmt: on
@@ -104,7 +139,7 @@ esekf_vectors = [
             ],
         ],
         [
-            "Predicted Maesurements",
+            "predicted maesurements",
             "h",
             r"h",
             [
@@ -120,4 +155,163 @@ esekf_vectors = [
 ]
 
 
-print(esekf_vectors)
+# ==================
+# variables dictionary helper functions
+# ==================
+
+
+def get_definition(target_key, target_value, node=esekf_vectors):
+    """
+    Recursively search the schema tree for an element matching target_key == target_value
+    """
+    if isinstance(node, dict):
+        if node.get(target_key) == target_value:
+            return node
+        for val in node.values():
+            result = get_definition(target_key, target_value, val)
+            if result:
+                return result
+    elif isinstance(node, list):
+        for item in node:
+            result = get_definition(target_key, target_value, item)
+            if result:
+                return result
+    return None
+
+
+def tex_sym_with_dims(tex_symbol, dim):
+    """
+    adds the dimensions for each tex symbol, example:
+    input: (r"p", 3), output: [r"p_{x}", r"p_{y}", r"p_{z}"]
+
+    adds x,y,z to inputs with three dimensions
+    adds w,x,y,z to inputs with four dimensions
+
+    :return: array of strings, formatted to fit standard latex notation
+    """
+    if dim not in (3, 4):
+        return [tex_symbol]
+    dimensions = ["x", "y", "z"] if dim == 3 else ["w", "x", "y", "z"]
+    if "_" in tex_symbol:
+        return [tex_symbol[:-1] + r"," + i + r"}" for i in dimensions]
+    else:
+        return [tex_symbol + r"_{" + i + r"}" for i in dimensions]
+
+
+def give_components_index():
+    for vec in esekf_vectors:
+        current_index = 0
+        for component in vec["components"]:
+            dims = component["dims"]
+            component["idx"] = slice(current_index, current_index + dims)
+            current_index += dims
+        vec["length"] = current_index
+
+
+give_components_index()
+print(get_definition("name", "Speaker error state"))
+
+# ==================
+# constants
+# ==================
+
+# physical constants
+
+gravity_constant = 9.80665
+gravity_vector = [0, 0, -1 * gravity_constant]
+
+pi = 3.141592653589793
+
+# system constants
+
+# \Delta p_{I \to c}
+IMU_cam_translation = [0, -0.0013, -0.00662]
+# \Delta q_{I \to c}
+Phi_in_rad = 102 * (pi / 180)
+IMU_cam_rotation = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
+
+
+# ==================
+# math helper functions
+# ==================
+
+
+def R(q):
+    """
+    turns input quaternion into rotation matrix to be multiplied from the left to a vector
+
+    :param q: quaternion as sympy or numpy array
+    :return: sympy or numpy Matrix, depending on the input type
+    """
+    qw, qx, qy, qz = q[0], q[1], q[2], q[3]
+    rotation_matrix = [
+        [1 - 2 * (qy**2 + qz**2), 2 * (qx * qy - qz * qw), 2 * (qx * qz + qy * qw)],
+        [2 * (qx * qy + qz * qw), 1 - 2 * (qx**2 + qz**2), 2 * (qy * qz - qx * qw)],
+        [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx**2 + qy**2)],
+    ]
+    return match_output_to_input_type(q, rotation_matrix)
+
+
+def quat_from_axis_angle(Phi, small_angle=True):
+    """
+    definition see Solà 2017
+    """
+    if isinstance(Phi, sym.Matrix):
+        if small_angle:
+            return sym.Matrix([1, *(0.5 * Phi)])
+
+        norm = sym.sqrt(Phi[0] ** 2 + Phi[1] ** 2 + Phi[2] ** 2)
+        return sym.Matrix(
+            [sym.cos(0.5 * norm), *(Phi * (1 / norm) * sym.sin(0.5 * norm))]
+        )
+
+    else:
+        if small_angle:
+            return np.array([1, *(0.5 * Phi)])
+
+        norm = np.linalg.norm(Phi)
+        return np.array([np.cos(0.5 * norm), *(Phi * (1 / norm) * np.sin(0.5 * norm))])
+
+
+def skew_symmetric_matrix(omega):
+    """
+    definition see Solà 2017
+    """
+    omega_x, omega_y, omega_z = omega[0], omega[1], omega[2]
+    matrix = [[0, -omega_z, omega_y], [omega_z, 0, -omega_x], [-omega_y, omega_x, 0]]
+    return match_output_to_input_type(omega, matrix)
+
+
+def quat_inv(q):
+    """
+    construct the inverse of a quaternion
+
+    :param q: quaternion
+    :return: quaternion inverse
+    """
+    inverse = [q[0], -q[1], -q[2], -q[3]]
+    return match_output_to_input_type(q, inverse)
+
+
+def left_quat_matrix(q):
+    qw, qx, qy, qz = q[0], q[1], q[2], q[3]
+    matrix = [
+        [qw, -qx, -qy, -qz],
+        [qx, qw, -qz, qy],
+        [qy, qz, qw, -qx],
+        [qz, -qy, qx, qw],
+    ]
+    return match_output_to_input_type(q, matrix)
+
+
+def match_output_to_input_type(var, output):
+    """
+    helps return the correct type, based on the input type
+
+    :param var: possible input types: sympy Matrix, numpy array or default python array
+    """
+    if isinstance(var, sym.Matrix):
+        return sym.Matrix(output)
+    if isinstance(var, np.ndarray):
+        return np.array(output)
+    return output
