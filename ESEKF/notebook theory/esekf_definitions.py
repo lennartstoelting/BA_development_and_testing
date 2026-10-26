@@ -80,7 +80,12 @@ esekf_vectors = [
             [
                 ["Speaker position error", "delta_p_s", r"\delta{p}_{s}", 3],
                 ["Speaker velocity error", "delta_v_s", r"\delta{v}_{s}", 3],
-                ["Speaker orientation error", "delta_q_s", r"\delta{\theta}_{s}", 3],
+                [
+                    "Speaker orientation error",
+                    "delta_theta_s",
+                    r"\delta{\theta}_{s}",
+                    3,
+                ],
             ],
         ],
         [
@@ -125,7 +130,7 @@ esekf_vectors = [
             [
                 # fmt: off
                 ["Speaker velocity error noise", "delta_v_s_n", r"\delta{v}_{sn}", 3],
-                ["Speaker orientation error noise", "delta_q_s_n", r"\delta{\theta}_{sn}", 3],
+                ["Speaker orientation error noise", "delta_theta_s_n", r"\delta{\theta}_{sn}", 3],
                 # fmt: on
             ],
         ],
