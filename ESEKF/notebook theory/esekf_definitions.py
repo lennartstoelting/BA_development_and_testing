@@ -16,6 +16,26 @@ in case aspects, naming or other concepts change later in the process
 
 
 # ==================
+# constants
+# ==================
+
+# physical constants
+
+gravity_constant = 9.80665
+gravity_vector = [0, 0, -1 * gravity_constant]
+
+pi = 3.141592653589793
+
+# system constants
+
+# \Delta p_{I \to c}
+IMU_cam_translation_value = [0, -0.0013, -0.00662]
+# \Delta q_{I \to c}
+Phi_in_rad = 102 * (pi / 180)
+IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
+
+
+# ==================
 # dictionary of variables
 # ==================
 
@@ -150,7 +170,7 @@ esekf_vectors = [
             [
                 # fmt: off
                 ["IMU accelerometer noise (m/s^2)", "a_tilde_n", r"\tilde{a}_{n}", 3],
-                ["IMU gyroscope noise (rad/s)", "omega_tilde_m", r"\tilde{\omega}_{n}", 3],
+                ["IMU gyroscope noise (rad/s)", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
                 # fmt: on
             ],
         ],
@@ -257,26 +277,6 @@ def get_sym_subarray(target_value, target_key="var"):
         )
         if res:
             return sym.Matrix(vec["sympy array"][item["idx"]])
-
-
-# ==================
-# constants
-# ==================
-
-# physical constants
-
-gravity_constant = 9.80665
-gravity_vector = [0, 0, -1 * gravity_constant]
-
-pi = 3.141592653589793
-
-# system constants
-
-# \Delta p_{I \to c}
-IMU_cam_translation_value = [0, -0.0013, -0.00662]
-# \Delta q_{I \to c}
-Phi_in_rad = 102 * (pi / 180)
-IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
 
 
 # ==================
