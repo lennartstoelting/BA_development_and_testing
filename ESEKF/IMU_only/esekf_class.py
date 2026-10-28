@@ -5,8 +5,7 @@ import dill
 from esekf_plot import *
 
 
-theory_folder_path = "../notebook theory/"
-with open(f"{theory_folder_path}filter_funcs_IMU_only.pkl", "rb") as f:
+with open(f"filter_funcs_IMU_only.pkl", "rb") as f:
     esekf_funcs = dill.load(f)
 
 

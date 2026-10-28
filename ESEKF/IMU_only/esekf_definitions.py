@@ -34,6 +34,9 @@ IMU_cam_translation_value = [0, -0.0013, -0.00662]
 Phi_in_rad = 102 * (pi / 180)
 IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
 
+# length of timewindow at the start for IMU calibration in seconds
+calibration_dt = 3
+
 
 # ==================
 # dictionary of variables
@@ -196,7 +199,7 @@ esekf_vectors = [
 # ==================
 
 
-def get_definition(target_value, target_key="name", node=esekf_vectors):
+def find_def(target_value, target_key="name", node=esekf_vectors):
     """
     Recursively search the schema tree for an element matching target_key == target_value
     """
@@ -204,12 +207,12 @@ def get_definition(target_value, target_key="name", node=esekf_vectors):
         if node.get(target_key) == target_value:
             return node
         for val in node.values():
-            result = get_definition(target_value, target_key, val)
+            result = find_def(target_value, target_key, val)
             if result:
                 return result
     elif isinstance(node, list):
         for item in node:
-            result = get_definition(target_value, target_key, item)
+            result = find_def(target_value, target_key, item)
             if result:
                 return result
     return None
@@ -235,7 +238,7 @@ def tex_with_dims(tex_symbol, dim):
 
 
 def get_tex_vec(target_value):
-    item = get_definition(target_value)
+    item = find_def(target_value)
     return tex_with_dims(item["latex"], item["dims"])
 
 
@@ -254,7 +257,7 @@ add_components_index()
 
 def add_vec_sympy_matrices():
     for vec in esekf_vectors:
-        definition = get_definition(vec["name"])
+        definition = find_def(vec["name"])
         array = [
             vec for c in definition["components"] for vec in get_tex_vec(c["name"])
         ]
@@ -269,7 +272,7 @@ def get_sym_subarray(target_value, target_key="var"):
     get sympy symbols for the components of each vector, just by inputing the variable.
     useful because the vectors sympy matrix is only stored as one big array, getting the matching subarray is difficult
     """
-    item = get_definition(target_value, target_key)
+    item = find_def(target_value, target_key)
     for vec in esekf_vectors:
         res = next(
             (c for c in vec["components"] if c == item),

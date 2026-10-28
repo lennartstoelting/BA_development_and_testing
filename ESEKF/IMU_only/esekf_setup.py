@@ -3,18 +3,11 @@ import pandas as pd
 import os
 
 from esekf_class import Filter
-import sys
-
-sys.path.insert(1, "/../notebook theory/")
-
-import esekf_definitions
+from esekf_definitions import *
 
 
-gravity_constant = 9.80665  # taken from scipy.constants.g
-calibration_dt = 3  # length of timewindow at the start for IMU calibration in seconds
-
-recordings_folder_path = "../csv_files_of_neon_recordings/"
-unused_columns_in_recordings = [
+recordings_folder = "../csv_files_of_neon_recordings/"
+unused_cols_of_recordings = [
     "roll [deg]",
     "pitch [deg]",
     "yaw [deg]",
@@ -30,69 +23,76 @@ state_history_output = "IMU_input_and_states_over_time.csv"
 
 def input_file_selection():
     try:
-        input_files = [
-            f for f in os.listdir(recordings_folder_path) if f.endswith(".csv")
-        ]
-        input_files.sort()
+        input_files = [f for f in os.listdir(recordings_folder) if f.endswith(".csv")]
     except FileNotFoundError:
-        print(f"Error: The directory '{recordings_folder_path}' does not exist.")
-        return None
+        print(f"Error: The directory '{recordings_folder}' does not exist.")
+        raise FileNotFoundError
 
     if not input_files:
-        print(
-            f"The directory '{recordings_folder_path}' exists but no CSV files are found in the directory."
-        )
-        return None
+        print(f"The directory '{recordings_folder}' exists but contains no CSV files.")
+        raise FileNotFoundError
 
     # User is prompted in terminal to select out of the available recordings
     print("\nThe following IMU data files are available:\n")
-    for index, file in enumerate(input_files):
-        print(f" {index} - {file}")
-
+    [print(f" {index} - {file}") for index, file in enumerate(input_files)]
     selected_index_input = input("\nPlease select the input file by typing its index: ")
+
+    file_name = None
+
+    if selected_index_input == "q":
+        print("aborting script execution")
+        raise ValueError
 
     try:
         selected_id = int(selected_index_input)
         if 0 <= selected_id < len(input_files):
             file_name = input_files[selected_id]
-            print(f'Index provided, reading file:\n\n > "{file_name}"\n\n ============')
-            return os.path.join(recordings_folder_path, file_name)
+            print(f"reading file:")
     except ValueError:
         pass
 
-    default_file = input_files[0]
-    print(
-        f'Invalid selection! Defaulting to index 0, reading file:\n\n > "{default_file}"\n\n ============'
-    )
-    return os.path.join(recordings_folder_path, default_file)
+    if not file_name:
+        print(f"Invalid selection! Defaulting to index 0, reading file:")
+        file_name = input_files[0]
+
+    print(f'\n > "{file_name}"\n\n ============')
+    return os.path.join(recordings_folder, file_name)
+
+
+def get_IMU_data(file):
+    try:
+        all_imu_data = pd.read_csv(file, engine="python")
+    except FileNotFoundError:
+        print(f"Error: Reading '{file}' as CSV failed.")
+        raise FileNotFoundError
+
+    return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
 
 
 def main():
-    input_file_path = input_file_selection()
     try:
-        all_imu_data = pd.read_csv(input_file_path, engine="python")
+        input_file_path = input_file_selection()
+        imu_data = get_IMU_data(input_file_path)
     except FileNotFoundError:
-        print(f"Error: Reading '{input_file_path}' as CSV failed.")
         return
-    imu_data = all_imu_data.drop(unused_columns_in_recordings, axis=1, errors="ignore")
 
     # ===
-    # csv data retrieved and cleaned
+    # timers for loop
     # ===
 
     start_time = imu_data["timestamp [ns]"].iloc[0] / 1e9  # nanoseconds to seconds
     previous_time = start_time  # previous_time is irrelevant in calibration steps
     esekf = Filter(calibration_dt)
 
-    temp = True
-
-    sum_of_corrections_triggered = 0
+    corr_step_triggered = 0
     for index, row in imu_data.iterrows():
-        # prepare inputs
         current_time = row["timestamp [ns]"] / 1e9
         elapsed_time = current_time - start_time
-
         dt = current_time - previous_time
+
+        # ===
+        # sensor inputs
+        # ===
 
         accel_in_g = np.array([row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
         gyro_in_deg_s = np.array([row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
@@ -101,21 +101,25 @@ def main():
         a_tilde = accel_in_g * gravity_constant
         omega_tilde = gyro_in_deg_s * (np.pi / 180.0)
 
-        # calibration
+        # ===
+        # calibration step
+        # ===
+
         if not esekf.calibration_complete:
             esekf.calibration_step(accel_in_g, omega_tilde, elapsed_time)
             esekf.input_and_state_history.append(
                 np.hstack([None, a_tilde, omega_tilde, elapsed_time])
             )
             continue
-        # elif temp:
-        # temp = False
-        print(np.linalg.det(esekf.P))
 
-        # filter is running
+        # print(f"determinant of covariance P: {np.linalg.det(esekf.P)}")
+
+        # ===
+        # prediction and measurement step
+        # ===
+
         esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
 
-        # this is probably only temporary, the I just want to do a check of whether to apply a correction step
         # static_accel_threshold = 0.1
         # static_gyro_threshold = 0.1
         # accel_seems_static = (
@@ -129,12 +133,12 @@ def main():
         #     print(
         #         f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
         #     )
+        #     esekf.correction_step(a_tilde, gravity_constant)
         # else:
-        # sum_of_corrections_triggered += 1
+        #     corr_step_triggered += 1
         #     print(
         #         f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
         #     )
-        # esekf.correction_step(a_tilde, gravity_constant)
 
         # save state history
         esekf.input_and_state_history.append(
@@ -143,14 +147,13 @@ def main():
 
         # prepare for next iteration
         previous_time = current_time
-    print(f"covariance P: {np.linalg.det(esekf.P)}")
 
     print(
-        f"correction step triggered {sum_of_corrections_triggered} out of {imu_data.shape[0]} times"
+        f"correction step triggered: {corr_step_triggered} / {imu_data.shape[0]} times"
     )
 
     esekf.plot_data(
-        input_file_path.replace(recordings_folder_path, ""), state_history_output
+        input_file_path.replace(recordings_folder, ""), state_history_output
     )
 
 
