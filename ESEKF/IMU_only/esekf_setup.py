@@ -3,6 +3,12 @@ import pandas as pd
 import os
 
 from esekf_class import Filter
+import sys
+
+sys.path.insert(1, "/../notebook theory/")
+
+import esekf_definitions
+
 
 gravity_constant = 9.80665  # taken from scipy.constants.g
 calibration_dt = 3  # length of timewindow at the start for IMU calibration in seconds
