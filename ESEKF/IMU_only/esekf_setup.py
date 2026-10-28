@@ -21,54 +21,6 @@ unused_cols_of_recordings = [
 state_history_output = "IMU_input_and_states_over_time.csv"
 
 
-def input_file_selection():
-    try:
-        input_files = [f for f in os.listdir(recordings_folder) if f.endswith(".csv")]
-    except FileNotFoundError:
-        print(f"Error: The directory '{recordings_folder}' does not exist.")
-        raise FileNotFoundError
-
-    if not input_files:
-        print(f"The directory '{recordings_folder}' exists but contains no CSV files.")
-        raise FileNotFoundError
-
-    # User is prompted in terminal to select out of the available recordings
-    print("\nThe following IMU data files are available:\n")
-    [print(f" {index} - {file}") for index, file in enumerate(input_files)]
-    selected_index_input = input("\nPlease select the input file by typing its index: ")
-
-    file_name = None
-
-    if selected_index_input == "q":
-        print("aborting script execution")
-        raise ValueError
-
-    try:
-        selected_id = int(selected_index_input)
-        if 0 <= selected_id < len(input_files):
-            file_name = input_files[selected_id]
-            print(f"reading file:")
-    except ValueError:
-        pass
-
-    if not file_name:
-        print(f"Invalid selection! Defaulting to index 0, reading file:")
-        file_name = input_files[0]
-
-    print(f'\n > "{file_name}"\n\n ============')
-    return os.path.join(recordings_folder, file_name)
-
-
-def get_IMU_data(file):
-    try:
-        all_imu_data = pd.read_csv(file, engine="python")
-    except FileNotFoundError:
-        print(f"Error: Reading '{file}' as CSV failed.")
-        raise FileNotFoundError
-
-    return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
-
-
 def main():
     try:
         input_file_path = input_file_selection()
@@ -130,15 +82,15 @@ def main():
         #     np.linalg.norm(omega_tilde - esekf.x[13:16]) < static_gyro_threshold
         # )
         # if accel_seems_static and gyro_seems_static:
-        #     print(
-        #         f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
-        #     )
+        #     # print(
+        #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
+        #     # )
         #     esekf.correction_step(a_tilde, gravity_constant)
         # else:
         #     corr_step_triggered += 1
-        #     print(
-        #         f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
-        #     )
+        #     # print(
+        #     #     f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
+        #     # )
 
         # save state history
         esekf.input_and_state_history.append(
@@ -155,6 +107,54 @@ def main():
     esekf.plot_data(
         input_file_path.replace(recordings_folder, ""), state_history_output
     )
+
+
+def input_file_selection():
+    try:
+        input_files = [f for f in os.listdir(recordings_folder) if f.endswith(".csv")]
+    except FileNotFoundError:
+        print(f"Error: The directory '{recordings_folder}' does not exist.")
+        raise FileNotFoundError
+
+    if not input_files:
+        print(f"The directory '{recordings_folder}' exists but contains no CSV files.")
+        raise FileNotFoundError
+
+    # User is prompted in terminal to select out of the available recordings
+    print("\nThe following IMU data files are available:\n")
+    [print(f" {index} - {file}") for index, file in enumerate(input_files)]
+    selected_index_input = input("\nPlease select the input file by typing its index: ")
+
+    file_name = None
+
+    if selected_index_input == "q":
+        print("aborting script execution")
+        raise ValueError
+
+    try:
+        selected_id = int(selected_index_input)
+        if 0 <= selected_id < len(input_files):
+            file_name = input_files[selected_id]
+            print(f"reading file:")
+    except ValueError:
+        pass
+
+    if not file_name:
+        print(f"Invalid selection! Defaulting to index 0, reading file:")
+        file_name = input_files[0]
+
+    print(f'\n > "{file_name}"\n\n ============')
+    return os.path.join(recordings_folder, file_name)
+
+
+def get_IMU_data(file):
+    try:
+        all_imu_data = pd.read_csv(file, engine="python")
+    except FileNotFoundError:
+        print(f"Error: Reading '{file}' as CSV failed.")
+        raise FileNotFoundError
+
+    return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
 
 
 if __name__ == "__main__":

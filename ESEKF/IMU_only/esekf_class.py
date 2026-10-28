@@ -87,9 +87,9 @@ class Filter:
         # for now, these values are trial and error
         # (low number -> low variance -> high certainty)
         initial_certainties = {
-            "position": 1e-10,
-            "velocity": 1e-10,
-            "orientation": 1e-7,
+            "position": 1e-5,
+            "velocity": 1e-5,
+            "orientation": 1e-5,
             "accel_bias": 1e-5,
             "gyro_bias": 1e-5,
         }
@@ -113,7 +113,7 @@ class Filter:
         )
 
     def _initialize_measurement_noise_covariance_matrix_W(self):
-        measurement_noise = {"accel_gravity": 1e-3}
+        measurement_noise = {"accel_gravity": 1e-5}
 
         measurement_noise_order = ["accel_gravity"]
 
