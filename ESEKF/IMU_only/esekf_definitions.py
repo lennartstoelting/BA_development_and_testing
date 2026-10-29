@@ -42,25 +42,25 @@ calibration_dt = 3
 # dictionary of variables
 # ==================
 
-create_component = lambda name, var, tex, dims: {
+_create_vector = lambda name, var, tex, components: {
+    "name": name if isinstance(name, str) else None,
+    "var": var if isinstance(var, str) else None,
+    "latex": tex if isinstance(tex, str) else None,
+    "components": (
+        [_create_component(*c) for c in components]
+        if isinstance(components, list)
+        else None
+    ),
+}
+_create_component = lambda name, var, tex, dims: {
     "name": name if isinstance(name, str) else None,
     "var": var if isinstance(var, str) else None,
     "latex": tex if isinstance(tex, str) else None,
     "dims": dims if isinstance(dims, int) else None,
 }
-create_vector = lambda name, var, tex, components: {
-    "name": name if isinstance(name, str) else None,
-    "var": var if isinstance(var, str) else None,
-    "latex": tex if isinstance(tex, str) else None,
-    "components": (
-        [create_component(*c) for c in components]
-        if isinstance(components, list)
-        else None
-    ),
-}
 
 esekf_vectors = [
-    create_vector(*v)
+    _create_vector(*v)
     for v in [
         [
             "IMU nominal state",
@@ -194,6 +194,25 @@ esekf_vectors = [
 ]
 
 
+def _add_components_index():
+    for vec in esekf_vectors:
+        current_index = 0
+        for component in vec["components"]:
+            dims = component["dims"]
+            component["slice"] = slice(current_index, current_index + dims)
+            current_index += dims
+        vec["length"] = current_index
+
+
+def _add_vec_sympy_matrices():
+    for vec in esekf_vectors:
+        definition = get_def(vec["name"])
+        array = [
+            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
+        ]
+        vec["sympy array"] = sym.Matrix(sym.symbols(array))
+
+
 # ==================
 # variables dictionary helper functions
 # ==================
@@ -242,31 +261,6 @@ def get_tex_vec(target_value):
     return tex_with_dims(item["latex"], item["dims"])
 
 
-def add_components_index():
-    for vec in esekf_vectors:
-        current_index = 0
-        for component in vec["components"]:
-            dims = component["dims"]
-            component["slice"] = slice(current_index, current_index + dims)
-            current_index += dims
-        vec["length"] = current_index
-
-
-add_components_index()
-
-
-def add_vec_sympy_matrices():
-    for vec in esekf_vectors:
-        definition = get_def(vec["name"])
-        array = [
-            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
-        ]
-        vec["sympy array"] = sym.Matrix(sym.symbols(array))
-
-
-add_vec_sympy_matrices()
-
-
 def get_sym_subarray(target_value, target_key="var"):
     """
     get sympy symbols for the components of each vector, just by inputing the variable.
@@ -280,6 +274,10 @@ def get_sym_subarray(target_value, target_key="var"):
         )
         if res:
             return sym.Matrix(vec["sympy array"][item["slice"]])
+
+
+_add_components_index()
+_add_vec_sympy_matrices()
 
 
 # ==================
