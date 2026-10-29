@@ -50,42 +50,46 @@ def main():
         gyro_in_deg_s = np.array([row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
 
         # unit conversion
-        a_tilde = accel_in_g * gravity_constant
-        omega_tilde = gyro_in_deg_s * (np.pi / 180.0)
+        accel_in_m_ss = accel_in_g * gravity_constant
+        gyro_in_rad_s = gyro_in_deg_s * (np.pi / 180.0)
 
         # ===
         # calibration step
         # ===
 
         if not esekf.calibration_complete:
-            esekf.calibration_step(accel_in_g, omega_tilde, elapsed_time)
+            esekf.calibration_step(accel_in_g, gyro_in_rad_s, elapsed_time)
             esekf.input_and_state_history.append(
-                np.hstack([None, a_tilde, omega_tilde, elapsed_time])
+                np.hstack([None, accel_in_m_ss, gyro_in_rad_s, elapsed_time])
             )
             continue
-
-        # print(f"determinant of covariance P: {np.linalg.det(esekf.P)}")
 
         # ===
         # prediction and measurement step
         # ===
 
-        esekf.prediction_step(a_tilde, omega_tilde, gravity_constant, dt)
+        esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
 
         # static_accel_threshold = 0.1
         # static_gyro_threshold = 0.1
         # accel_seems_static = (
-        #     np.absolute(np.linalg.norm(a_tilde - esekf.x[10:13]) - gravity_constant)
+        #     np.absolute(
+        #         np.linalg.norm(
+        #             accel_in_m_ss - esekf.x[get_def("IMU accel bias")["slice"]]
+        #         )
+        #         - gravity_constant
+        #     )
         #     < static_accel_threshold
         # )
         # gyro_seems_static = (
-        #     np.linalg.norm(omega_tilde - esekf.x[13:16]) < static_gyro_threshold
+        #     np.linalg.norm(gyro_in_rad_s - esekf.x[get_def("IMU accel bias")["slice"]])
+        #     < static_gyro_threshold
         # )
         # if accel_seems_static and gyro_seems_static:
         #     # print(
         #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
         #     # )
-        #     esekf.correction_step(a_tilde, gravity_constant)
+        #     esekf.correction_step(accel_in_m_ss, gravity_constant)
         # else:
         #     corr_step_triggered += 1
         #     # print(
@@ -103,6 +107,7 @@ def main():
     print(
         f"correction step triggered: {corr_step_triggered} / {imu_data.shape[0]} times"
     )
+    print(f"determinant of covariance P at the end: {np.linalg.det(esekf.P)}")
 
     esekf.plot_data(
         input_file_path.replace(recordings_folder, ""), state_history_output

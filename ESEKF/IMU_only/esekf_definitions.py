@@ -199,7 +199,7 @@ esekf_vectors = [
 # ==================
 
 
-def find_def(target_value, target_key="name", node=esekf_vectors):
+def get_def(target_value, target_key="name", node=esekf_vectors):
     """
     Recursively search the schema tree for an element matching target_key == target_value
     """
@@ -207,12 +207,12 @@ def find_def(target_value, target_key="name", node=esekf_vectors):
         if node.get(target_key) == target_value:
             return node
         for val in node.values():
-            result = find_def(target_value, target_key, val)
+            result = get_def(target_value, target_key, val)
             if result:
                 return result
     elif isinstance(node, list):
         for item in node:
-            result = find_def(target_value, target_key, item)
+            result = get_def(target_value, target_key, item)
             if result:
                 return result
     return None
@@ -238,7 +238,7 @@ def tex_with_dims(tex_symbol, dim):
 
 
 def get_tex_vec(target_value):
-    item = find_def(target_value)
+    item = get_def(target_value)
     return tex_with_dims(item["latex"], item["dims"])
 
 
@@ -247,7 +247,7 @@ def add_components_index():
         current_index = 0
         for component in vec["components"]:
             dims = component["dims"]
-            component["idx"] = slice(current_index, current_index + dims)
+            component["slice"] = slice(current_index, current_index + dims)
             current_index += dims
         vec["length"] = current_index
 
@@ -257,7 +257,7 @@ add_components_index()
 
 def add_vec_sympy_matrices():
     for vec in esekf_vectors:
-        definition = find_def(vec["name"])
+        definition = get_def(vec["name"])
         array = [
             vec for c in definition["components"] for vec in get_tex_vec(c["name"])
         ]
@@ -272,14 +272,14 @@ def get_sym_subarray(target_value, target_key="var"):
     get sympy symbols for the components of each vector, just by inputing the variable.
     useful because the vectors sympy matrix is only stored as one big array, getting the matching subarray is difficult
     """
-    item = find_def(target_value, target_key)
+    item = get_def(target_value, target_key)
     for vec in esekf_vectors:
         res = next(
             (c for c in vec["components"] if c == item),
             None,
         )
         if res:
-            return sym.Matrix(vec["sympy array"][item["idx"]])
+            return sym.Matrix(vec["sympy array"][item["slice"]])
 
 
 # ==================

@@ -3,6 +3,7 @@ import pandas as pd
 import dill
 
 from esekf_plot import *
+from esekf_definitions import *
 
 
 with open(f"filter_funcs_IMU_only.pkl", "rb") as f:
@@ -17,6 +18,12 @@ class Filter:
         self.Q = None
         self.J = None
         self.W = None
+
+        self.p_slice = get_def("IMU position")["slice"]
+        self.v_slice = get_def("IMU velocity")["slice"]
+        self.q_slice = get_def("IMU orientation")["slice"]
+        self.a_b_slice = get_def("IMU accel bias")["slice"]
+        self.omega_b_slice = get_def("IMU gyro bias")["slice"]
 
         # Since I will not have it always be the case that there is zero speakers and the only measurement is gravity,
         # I need to construct the matrices individually but also ideally automatically
@@ -34,9 +41,9 @@ class Filter:
         self.state_history = []
         self.input_and_state_history = []
 
-    def calibration_step(self, accel_in_g, omega_tilde, elapsed_time):
+    def calibration_step(self, accel_in_g, gyro_in_rad_s, elapsed_time):
         self.accel_calibration_buffer.append(accel_in_g)
-        self.gyro_calibration_buffer.append(omega_tilde)
+        self.gyro_calibration_buffer.append(gyro_in_rad_s)
 
         if elapsed_time < self.calibration_dt:
             # keep calibarting if we are not over the calibration time window
@@ -52,36 +59,37 @@ class Filter:
         for i in self.x:
             print(i)
         """
+        print(f"determinant of covariance P at the start: {np.linalg.det(self.P)}")
 
         self.accel_calibration_buffer = []
         self.gyro_calibration_buffer = []
 
     def _initialize_state_x(self):
-        # calibration data
-        accel_array = np.array(self.accel_calibration_buffer)
-        gyro_array = np.array(self.gyro_calibration_buffer)
-
-        mean_accel = np.mean(accel_array, axis=0)
-        mean_gyro = np.mean(gyro_array, axis=0)
-
-        # position and velocity
-        p_init = np.zeros(3)
-        v_init = np.zeros(3)
+        accel_mean = np.mean(np.array(self.accel_calibration_buffer), axis=0)
+        accel_mean_normalized = self.normalized(accel_mean)
+        gyro_mean = np.mean(np.array(self.gyro_calibration_buffer), axis=0)
 
         # orientation
         gravity_in_g = np.array([0.0, 0.0, 1.0])
-        qw_init = 1.0 + np.dot(self.normalized(mean_accel), gravity_in_g)
-        qx_init, qy_init, qz_init = np.cross(self.normalized(mean_accel), gravity_in_g)
+        qw_init = 1.0 + np.dot(accel_mean_normalized, gravity_in_g)
+        qx_init, qy_init, qz_init = np.cross(accel_mean_normalized, gravity_in_g)
 
         q_init = self.normalized([qw_init, qx_init, qy_init, qz_init])
 
         # accel bias
-        a_b_init = mean_accel - self.normalized(mean_accel)
+        # subtract what pure gravity should look like (1g) to be left with bias
+        accel_mean_without_gravity = accel_mean - accel_mean_normalized
+        # g to m/s^2 conversion
+        a_b_init = accel_mean_without_gravity * gravity_constant
 
         # gyro bias
-        omega_b_init = mean_gyro
+        omega_b_init = gyro_mean
 
-        self.x = np.array([*p_init, *v_init, *q_init, *a_b_init, *omega_b_init])
+        self.x = np.zeros(get_def("IMU nominal state")["length"])
+        # position and velocity start out at zero
+        self.x[self.q_slice] = q_init
+        self.x[self.a_b_slice] = a_b_init
+        self.x[self.omega_b_slice] = omega_b_init
 
     def _initialize_error_state_covariance_matrix_P(self):
         # for now, these values are trial and error
@@ -128,16 +136,25 @@ class Filter:
         self.x = esekf_funcs["f_x_IMU"](
             *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
         ).flatten()
-        self.x[6:10] = self.normalized(self.x[6:10])
+        self.x[self.q_slice] = self.normalized(self.x[self.q_slice])
 
         # hier ist die Frage ob ich das vorher mache oder nachher? Also
-        F_IMU = esekf_funcs["F_delta_x"](*self.x[6:16], *a_tilde, *omega_tilde, dt)
+        F_IMU = esekf_funcs["F_delta_x"](
+            *self.x[self.q_slice],
+            *self.x[self.a_b_slice],
+            *self.x[self.omega_b_slice],
+            *a_tilde,
+            *omega_tilde,
+            dt,
+        )
 
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
 
     def correction_step(self, a_tilde, gravity_constant):
         H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
-        h = esekf_funcs["h"](*self.x[6:10], *self.x[10:13], gravity_constant).flatten()
+        h = esekf_funcs["h"](
+            *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
+        ).flatten()
 
         try:
             K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
@@ -152,7 +169,7 @@ class Filter:
             print(f"P matrix: {self.P}")
         delta_x = K @ (a_tilde - h)
         self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
-        self.x[6:10] = self.normalized(self.x[6:10])
+        self.x[self.q_slice] = self.normalized(self.x[self.q_slice])
         self.P = (np.eye(15) - K @ H) @ np.linalg.inv(self.P)
 
     def plot_data(self, input_file_path, output):
@@ -195,3 +212,18 @@ class Filter:
     @staticmethod
     def normalized(vec):
         return vec / np.linalg.norm(vec)
+
+
+"""
+accel bias after initialization vorher:
+
+-0.00012129380588002045
+0.00031186704283532596
+0.005630196052433312
+
+accel bias after initialization nachher:
+
+-0.0011894859014333025
+0.0030583709356210493
+0.05521336211759513
+"""
