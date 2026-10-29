@@ -68,7 +68,7 @@ def main():
         # prediction and measurement step
         # ===
 
-        esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
+        # esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
 
         # static_accel_threshold = 0.1
         # static_gyro_threshold = 0.1

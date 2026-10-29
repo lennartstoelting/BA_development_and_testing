@@ -3,20 +3,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 
+from esekf_definitions import *
+
 
 def pyplot_input_and_state_grid(output_file_name, input_file_name):
+    p_sym = get_tex_vec("IMU position")
+    v_sym = get_tex_vec("IMU velocity")
+    q_sym = get_tex_vec("IMU orientation")
+    a_b_sym = get_tex_vec("IMU accel bias")
+    omega_b_sym = get_tex_vec("IMU gyro bias")
+
     df = pd.read_csv(output_file_name)
     time = df["time"].values
 
     # Pre-calculate Euler angles
-    quats_df = df[["q_x", "q_y", "q_z", "q_w"]].copy()
+    quats_df = df[[q_sym[1], q_sym[2], q_sym[3], q_sym[0]]].copy()
     nan_mask = quats_df.isna().any(axis=1)
 
     # Fill NaNs temporarily with an identity quaternion [0, 0, 0, 1] to prevent SciPy crash
-    quats_df["q_x"] = quats_df["q_x"].fillna(0.0)
-    quats_df["q_y"] = quats_df["q_y"].fillna(0.0)
-    quats_df["q_z"] = quats_df["q_z"].fillna(0.0)
-    quats_df["q_w"] = quats_df["q_w"].fillna(1.0)
+    quats_df[q_sym[1]] = quats_df[q_sym[1]].fillna(0.0)
+    quats_df[q_sym[2]] = quats_df[q_sym[2]].fillna(0.0)
+    quats_df[q_sym[3]] = quats_df[q_sym[3]].fillna(0.0)
+    quats_df[q_sym[0]] = quats_df[q_sym[0]].fillna(1.0)
 
     # Pre-calculate Euler angles
     rotations = Rotation.from_quat(quats_df.values)
@@ -44,9 +52,9 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     axs[0, 1].set_ylabel("Gyroscope (deg/s)")
 
     # Row 1: Position and Orientation
-    axs[2, 0].plot(time, df["p_x"], label=r"$p_x$", color="red")
-    axs[2, 0].plot(time, df["p_y"], label=r"$p_y$", color="green")
-    axs[2, 0].plot(time, df["p_z"], label=r"$p_z$", color="blue")
+    axs[2, 0].plot(time, df[p_sym[0]], label=r"$p_x$", color="red")
+    axs[2, 0].plot(time, df[p_sym[1]], label=r"$p_y$", color="green")
+    axs[2, 0].plot(time, df[p_sym[2]], label=r"$p_z$", color="blue")
     axs[2, 0].set_ylabel("Position (m)")
 
     axs[1, 1].plot(time, df["roll"], label="Roll")
@@ -55,23 +63,23 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     axs[1, 1].set_ylabel("Orientation (deg)")
 
     # Row 2: Velocity and empty space
-    axs[1, 0].plot(time, df["v_x"], label=r"$v_x$", color="red")
-    axs[1, 0].plot(time, df["v_y"], label=r"$v_y$", color="green")
-    axs[1, 0].plot(time, df["v_z"], label=r"$v_z$", color="blue")
+    axs[1, 0].plot(time, df[v_sym[0]], label=r"$v_x$", color="red")
+    axs[1, 0].plot(time, df[v_sym[1]], label=r"$v_y$", color="green")
+    axs[1, 0].plot(time, df[v_sym[2]], label=r"$v_z$", color="blue")
     axs[1, 0].set_ylabel("Velocity (m/s)")
 
     axs[2, 1].axis("off")  # Empty space
 
     # Row 3: Accel Bias and Gyro Bias
-    axs[3, 0].plot(time, df["a_b_x"], label=r"$a_{b,x}$")
-    axs[3, 0].plot(time, df["a_b_y"], label=r"$a_{b,y}$")
-    axs[3, 0].plot(time, df["a_b_z"], label=r"$a_{b,z}$")
+    axs[3, 0].plot(time, df[a_b_sym[0]], label=r"$a_{b,x}$")
+    axs[3, 0].plot(time, df[a_b_sym[1]], label=r"$a_{b,y}$")
+    axs[3, 0].plot(time, df[a_b_sym[2]], label=r"$a_{b,z}$")
     axs[3, 0].set_ylabel("accel bias")
     axs[3, 0].set_xlabel("time (s)")
 
-    axs[3, 1].plot(time, df["omega_b_x"], label=r"$\omega_{b,x}$")
-    axs[3, 1].plot(time, df["omega_b_y"], label=r"$\omega_{b,y}$")
-    axs[3, 1].plot(time, df["omega_b_z"], label=r"$\omega_{b,z}$")
+    axs[3, 1].plot(time, df[omega_b_sym[0]], label=r"$\omega_{b,x}$")
+    axs[3, 1].plot(time, df[omega_b_sym[1]], label=r"$\omega_{b,y}$")
+    axs[3, 1].plot(time, df[omega_b_sym[2]], label=r"$\omega_{b,z}$")
     axs[3, 1].set_ylabel("gyro bias")
     axs[3, 0].set_xlabel("time (s)")
 
