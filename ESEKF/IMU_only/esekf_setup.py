@@ -1,3 +1,5 @@
+"""The bridge between the User, the recording files, the filter instance, implemented theory and plotting"""
+
 import numpy as np
 import pandas as pd
 import os
@@ -7,16 +9,7 @@ from esekf_definitions import *
 
 
 recordings_folder = "../csv_files_of_neon_recordings/"
-unused_cols_of_recordings = [
-    "roll [deg]",
-    "pitch [deg]",
-    "yaw [deg]",
-    "quaternion x",
-    "quaternion y",
-    "quaternion z",
-    "quaternion w",
-    "recording id",
-]
+
 
 state_history_output = "IMU_input_and_states_over_time.csv"
 
@@ -68,7 +61,7 @@ def main():
         # prediction and measurement step
         # ===
 
-        # esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
+        esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
 
         # static_accel_threshold = 0.1
         # static_gyro_threshold = 0.1
@@ -89,7 +82,7 @@ def main():
         #     # print(
         #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
         #     # )
-        #     esekf.correction_step(accel_in_m_ss, gravity_constant)
+        # esekf.correction_step(accel_in_m_ss, gravity_constant)
         # else:
         #     corr_step_triggered += 1
         #     # print(
@@ -158,6 +151,17 @@ def get_IMU_data(file):
     except FileNotFoundError:
         print(f"Error: Reading '{file}' as CSV failed.")
         raise FileNotFoundError
+
+    unused_cols_of_recordings = [
+        "roll [deg]",
+        "pitch [deg]",
+        "yaw [deg]",
+        "quaternion x",
+        "quaternion y",
+        "quaternion z",
+        "quaternion w",
+        "recording id",
+    ]
 
     return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
 

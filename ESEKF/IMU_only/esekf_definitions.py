@@ -42,22 +42,50 @@ calibration_dt = 3
 # dictionary of variables
 # ==================
 
-_create_vector = lambda name, var, tex, components: {
-    "name": name if isinstance(name, str) else None,
-    "var": var if isinstance(var, str) else None,
-    "latex": tex if isinstance(tex, str) else None,
-    "components": (
-        [_create_component(*c) for c in components]
-        if isinstance(components, list)
-        else None
-    ),
-}
-_create_component = lambda name, var, tex, dims: {
-    "name": name if isinstance(name, str) else None,
-    "var": var if isinstance(var, str) else None,
-    "latex": tex if isinstance(tex, str) else None,
-    "dims": dims if isinstance(dims, int) else None,
-}
+
+def _create_vector(name: str, var: str, tex: str, components: list):
+    return {
+        "name": name,
+        "var": var,
+        "latex": tex,
+        "components": ([_create_component(*c) for c in components]),
+    }
+
+
+def _create_component(name: str, var: str, tex: str, dims: int):
+    return {
+        "name": name,
+        "var": var,
+        "latex": tex,
+        "dims": dims,
+    }
+
+
+def _add_components_index():
+    """
+    add the index for the range this component takes up\n
+    within the full array
+    """
+    for vec in esekf_vectors:
+        current_index = 0
+        for component in vec["components"]:
+            dims = component["dims"]
+            component["slice"] = slice(current_index, current_index + dims)
+            current_index += dims
+        vec["length"] = current_index
+
+
+def _add_vec_sympy_matrices():
+    """
+    add sympy matrices as the symbolic representation of the vector components
+    """
+    for vec in esekf_vectors:
+        definition = get_def(vec["name"])
+        array = [
+            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
+        ]
+        vec["sympy array"] = sym.Matrix(sym.symbols(array))
+
 
 esekf_vectors = [
     _create_vector(*v)
@@ -101,14 +129,11 @@ esekf_vectors = [
             "delta_x_s",
             r"\delta{x}_{s}",
             [
+                # fmt: off
                 ["Speaker position error", "delta_p_s", r"\delta{p}_{s}", 3],
                 ["Speaker velocity error", "delta_v_s", r"\delta{v}_{s}", 3],
-                [
-                    "Speaker orientation error",
-                    "delta_theta_s",
-                    r"\delta{\theta}_{s}",
-                    3,
-                ],
+                ["Speaker orientation error", "delta_theta_s", r"\delta{\theta}_{s}", 3],
+                # fmt: on
             ],
         ],
         [
@@ -194,25 +219,6 @@ esekf_vectors = [
 ]
 
 
-def _add_components_index():
-    for vec in esekf_vectors:
-        current_index = 0
-        for component in vec["components"]:
-            dims = component["dims"]
-            component["slice"] = slice(current_index, current_index + dims)
-            current_index += dims
-        vec["length"] = current_index
-
-
-def _add_vec_sympy_matrices():
-    for vec in esekf_vectors:
-        definition = get_def(vec["name"])
-        array = [
-            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
-        ]
-        vec["sympy array"] = sym.Matrix(sym.symbols(array))
-
-
 # ==================
 # variables dictionary helper functions
 # ==================
@@ -220,7 +226,7 @@ def _add_vec_sympy_matrices():
 
 def get_def(target_value, target_key="name", node=esekf_vectors):
     """
-    Recursively search the schema tree for an element matching target_key == target_value
+    Recursively search the schema definition tree for an element matching target_key == target_value
     """
     if isinstance(node, dict):
         if node.get(target_key) == target_value:
@@ -278,7 +284,6 @@ def get_sym_subarray(target_value, target_key="var"):
 
 _add_components_index()
 _add_vec_sympy_matrices()
-
 
 # ==================
 # math helper functions
