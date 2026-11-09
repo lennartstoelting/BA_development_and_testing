@@ -1,4 +1,14 @@
-"""The bridge between the User, the recording files, the filter instance, implemented theory and plotting"""
+"""
+The bridge between
+- the user
+- the recording files
+- the filter instance
+- implemented theory
+- plotting tools
+
+This file should not contain any of the actual mathmatical operations being performed by the filter,
+it's only the middleman
+"""
 
 import numpy as np
 import pandas as pd
@@ -6,108 +16,38 @@ import os
 
 from esekf_class import Filter
 from esekf_definitions import *
+from esekf_plot import *
 
 
 recordings_folder = "../csv_files_of_neon_recordings/"
-
 
 state_history_output = "IMU_input_and_states_over_time.csv"
 
 
 def main():
+    # fetch recording files names, ask user which one to run and prune unused data columns
     try:
-        input_file_path = input_file_selection()
-        imu_data = get_IMU_data(input_file_path)
-    except FileNotFoundError:
+        input_files = gather_IMU_files()
+        input_file_path = prompt_file_selection(input_files)
+        all_imu_data = read_csv(input_file_path)
+        imu_data = clean_csv(all_imu_data)
+    except (FileNotFoundError, ValueError):
         return
 
-    # ===
-    # timers for loop
-    # ===
-
-    start_time = imu_data["timestamp [ns]"].iloc[0] / 1e9  # nanoseconds to seconds
-    previous_time = start_time  # previous_time is irrelevant in calibration steps
-    esekf = Filter(calibration_dt)
-
-    corr_step_triggered = 0
+    # run filter
+    esekf = Filter()
     for index, row in imu_data.iterrows():
-        current_time = row["timestamp [ns]"] / 1e9
-        elapsed_time = current_time - start_time
-        dt = current_time - previous_time
+        esekf.process_IMU_sample(row)
 
-        # ===
-        # sensor inputs
-        # ===
-
-        accel_in_g = np.array([row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
-        gyro_in_deg_s = np.array([row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
-
-        # unit conversion
-        accel_in_m_ss = accel_in_g * gravity_constant
-        gyro_in_rad_s = gyro_in_deg_s * (np.pi / 180.0)
-
-        # ===
-        # calibration step
-        # ===
-
-        if not esekf.calibration_complete:
-            esekf.calibration_step(accel_in_g, gyro_in_rad_s, elapsed_time)
-            esekf.input_and_state_history.append(
-                np.hstack([None, accel_in_m_ss, gyro_in_rad_s, elapsed_time])
-            )
-            continue
-
-        # ===
-        # prediction and measurement step
-        # ===
-
-        esekf.prediction_step(accel_in_m_ss, gyro_in_rad_s, gravity_constant, dt)
-
-        # static_accel_threshold = 0.1
-        # static_gyro_threshold = 0.1
-        # accel_seems_static = (
-        #     np.absolute(
-        #         np.linalg.norm(
-        #             accel_in_m_ss - esekf.x[get_def("IMU accel bias")["slice"]]
-        #         )
-        #         - gravity_constant
-        #     )
-        #     < static_accel_threshold
-        # )
-        # gyro_seems_static = (
-        #     np.linalg.norm(gyro_in_rad_s - esekf.x[get_def("IMU accel bias")["slice"]])
-        #     < static_gyro_threshold
-        # )
-        # if accel_seems_static and gyro_seems_static:
-        #     # print(
-        #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
-        #     # )
-        # esekf.correction_step(accel_in_m_ss, gravity_constant)
-        # else:
-        #     corr_step_triggered += 1
-        #     # print(
-        #     #     f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
-        #     # )
-
-        # save state history
-        esekf.input_and_state_history.append(
-            np.hstack([esekf.x.copy(), accel_in_g, gyro_in_deg_s, elapsed_time])
-        )
-
-        # prepare for next iteration
-        previous_time = current_time
-
-    print(
-        f"correction step triggered: {corr_step_triggered} / {imu_data.shape[0]} times"
-    )
-    print(f"determinant of covariance P at the end: {np.linalg.det(esekf.P)}")
-
-    esekf.plot_data(
-        input_file_path.replace(recordings_folder, ""), state_history_output
+    # plot results
+    plot_data(
+        esekf.input_and_state_history,
+        input_file_path.replace(recordings_folder, ""),
+        state_history_output,
     )
 
 
-def input_file_selection():
+def gather_IMU_files():
     try:
         input_files = [f for f in os.listdir(recordings_folder) if f.endswith(".csv")]
     except FileNotFoundError:
@@ -118,6 +58,10 @@ def input_file_selection():
         print(f"The directory '{recordings_folder}' exists but contains no CSV files.")
         raise FileNotFoundError
 
+    return input_files
+
+
+def prompt_file_selection(input_files):
     # User is prompted in terminal to select out of the available recordings
     print("\nThe following IMU data files are available:\n")
     [print(f" {index} - {file}") for index, file in enumerate(input_files)]
@@ -145,13 +89,15 @@ def input_file_selection():
     return os.path.join(recordings_folder, file_name)
 
 
-def get_IMU_data(file):
+def read_csv(file):
     try:
-        all_imu_data = pd.read_csv(file, engine="python")
+        return pd.read_csv(file, engine="python")
     except FileNotFoundError:
         print(f"Error: Reading '{file}' as CSV failed.")
         raise FileNotFoundError
 
+
+def clean_csv(all_imu_data):
     unused_cols_of_recordings = [
         "roll [deg]",
         "pitch [deg]",
@@ -164,6 +110,29 @@ def get_IMU_data(file):
     ]
 
     return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
+
+
+def plot_data(history_array, input_file_path, output):
+    if not history_array:
+        print("Combined history of inputs and states is empty, can't be plotted")
+        return
+
+    df = pd.DataFrame(
+        history_array,
+        columns=[
+            *create_tex_vec("IMU position"),
+            *create_tex_vec("IMU velocity"),
+            *create_tex_vec("IMU orientation"),
+            *create_tex_vec("IMU accel bias"),
+            *create_tex_vec("IMU gyro bias"),
+            *create_tex_vec("IMU accelerometer (m/s^2)"),
+            *create_tex_vec("IMU gyroscope (rad/s)"),
+            "time",
+        ],
+    )
+    df.to_csv(output, index=False)
+
+    pyplot_input_and_state_grid(output, input_file_path)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 import dill
 
-from esekf_plot import *
 from esekf_definitions import *
 
 
@@ -11,7 +10,12 @@ with open(f"filter_funcs_IMU_only.pkl", "rb") as f:
 
 
 class Filter:
-    def __init__(self, calibration_dt=3):
+    def __init__(self):
+
+        self.start_time = None
+        self.previous_time = None
+        self.current_time = None
+        self.elapsed_time = None
 
         self.x = None
         self.P = None
@@ -32,7 +36,6 @@ class Filter:
         self._initialize_process_noise_jacobian_matrix_J()
         self._initialize_measurement_noise_covariance_matrix_W()
 
-        self.calibration_dt = calibration_dt
         self.calibration_complete = False
 
         self.accel_calibration_buffer = []
@@ -41,11 +44,76 @@ class Filter:
         self.state_history = []
         self.input_and_state_history = []
 
-    def calibration_step(self, accel_in_g, gyro_in_rad_s, elapsed_time):
+    def process_IMU_sample(self, data_row):
+        # prepare all inputs
+        timestamp = data_row["timestamp [ns]"] / 1e9
+
+        # fmt: off
+        accel_in_g = np.array([data_row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
+        accel_in_m_ss = accel_in_g * gravity_constant
+
+        gyro_in_deg_s = np.array([data_row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
+        gyro_in_rad_s = gyro_in_deg_s * (np.pi / 180.0)
+        # fmt: on
+
+        if not self.start_time:
+            """only for very first sample"""
+            self.start_time = timestamp
+
+        self.current_time = timestamp
+        self.elapsed_time = self.current_time - self.start_time
+
+        if not self.calibration_complete:
+            self._calibration_step(accel_in_g, gyro_in_rad_s)
+        else:
+            dt = self.current_time - self.previous_time
+            self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
+            # prediction step attempts
+            # static_accel_threshold = 0.1
+            # static_gyro_threshold = 0.1
+            # accel_seems_static = (
+            #     np.absolute(
+            #         np.linalg.norm(
+            #             accel_in_m_ss - esekf.x[get_def("IMU accel bias")["slice"]]
+            #         )
+            #         - gravity_constant
+            #     )
+            #     < static_accel_threshold
+            # )
+            # gyro_seems_static = (
+            #     np.linalg.norm(gyro_in_rad_s - esekf.x[get_def("IMU accel bias")["slice"]])
+            #     < static_gyro_threshold
+            # )
+            # if accel_seems_static and gyro_seems_static:
+            #     # print(
+            #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
+            #     # )
+            # self._correction_step(accel_in_m_ss, gravity_constant)
+            # else:
+            #     corr_step_triggered += 1
+            #     # print(
+            #     #     f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
+            #     # )
+
+        # append to history for plotting
+        self.input_and_state_history.append(
+            np.hstack(
+                [
+                    self.x.copy() if self.x is not None else None,
+                    accel_in_m_ss,
+                    gyro_in_rad_s,
+                    self.elapsed_time,
+                ]
+            )
+        )
+
+        self.previous_time = self.current_time
+
+    def _calibration_step(self, accel_in_g, gyro_in_rad_s):
         self.accel_calibration_buffer.append(accel_in_g)
         self.gyro_calibration_buffer.append(gyro_in_rad_s)
 
-        if elapsed_time < self.calibration_dt:
+        if self.elapsed_time < calibration_dt:
             # keep calibarting if we are not over the calibration time window
             return
 
@@ -54,7 +122,7 @@ class Filter:
         self.calibration_complete = True
         """
         print(
-            f"\nCalibration ended after {elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
+            f"\nCalibration ended after {self.elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
         )
         for i in self.x:
             print(i)
@@ -66,7 +134,7 @@ class Filter:
 
     def _initialize_state_x(self):
         accel_mean = np.mean(np.array(self.accel_calibration_buffer), axis=0)
-        accel_mean_normalized = self.normalized(accel_mean)
+        accel_mean_normalized = normalize_vector(accel_mean)
         gyro_mean = np.mean(np.array(self.gyro_calibration_buffer), axis=0)
 
         # orientation
@@ -74,7 +142,7 @@ class Filter:
         qw_init = 1.0 + np.dot(accel_mean_normalized, gravity_in_g)
         qx_init, qy_init, qz_init = np.cross(accel_mean_normalized, gravity_in_g)
 
-        q_init = self.normalized([qw_init, qx_init, qy_init, qz_init])
+        q_init = normalize_vector([qw_init, qx_init, qy_init, qz_init])
 
         # accel bias
         # subtract what pure gravity should look like (1g) to be left with bias
@@ -132,11 +200,11 @@ class Filter:
     def _initialize_process_noise_jacobian_matrix_J(self):
         self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
 
-    def prediction_step(self, a_tilde, omega_tilde, gravity_constant, dt):
+    def _prediction_step(self, a_tilde, omega_tilde, dt):
         self.x = esekf_funcs["f_x_IMU"](
             *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
         ).flatten()
-        self.x[self.q_slice] = self.normalized(self.x[self.q_slice])
+        self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
 
         # hier ist die Frage ob ich das vorher mache oder nachher? Also
         F_IMU = esekf_funcs["F_delta_x"](
@@ -150,7 +218,7 @@ class Filter:
 
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
 
-    def correction_step(self, a_tilde, gravity_constant):
+    def _correction_step(self, a_tilde):
         H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
         h = esekf_funcs["h"](
             *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
@@ -169,46 +237,5 @@ class Filter:
             print(f"P matrix: {self.P}")
         delta_x = K @ (a_tilde - h)
         self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
-        self.x[self.q_slice] = self.normalized(self.x[self.q_slice])
+        self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
         self.P = (np.eye(15) - K @ H) @ np.linalg.inv(self.P)
-
-    def plot_data(self, input_file_path, output):
-        if not self.input_and_state_history:
-            print("Combined history of inputs and states is empty, can't be plotted")
-            return
-
-        df = pd.DataFrame(
-            self.input_and_state_history,
-            columns=[
-                *get_tex_vec("IMU position"),
-                *get_tex_vec("IMU velocity"),
-                *get_tex_vec("IMU orientation"),
-                *get_tex_vec("IMU accel bias"),
-                *get_tex_vec("IMU gyro bias"),
-                *get_tex_vec("IMU accelerometer (m/s^2)"),
-                *get_tex_vec("IMU gyroscope (rad/s)"),
-                "time",
-            ],
-        )
-        df.to_csv(output, index=False)
-
-        pyplot_input_and_state_grid(output, input_file_path)
-
-    @staticmethod
-    def normalized(vec):
-        return vec / np.linalg.norm(vec)
-
-
-"""
-accel bias after initialization vorher:
-
--0.00012129380588002045
-0.00031186704283532596
-0.005630196052433312
-
-accel bias after initialization nachher:
-
--0.0011894859014333025
-0.0030583709356210493
-0.05521336211759513
-"""

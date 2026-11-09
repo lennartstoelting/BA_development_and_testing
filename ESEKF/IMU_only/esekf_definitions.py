@@ -82,7 +82,7 @@ def _add_vec_sympy_matrices():
     for vec in esekf_vectors:
         definition = get_def(vec["name"])
         array = [
-            vec for c in definition["components"] for vec in get_tex_vec(c["name"])
+            vec for c in definition["components"] for vec in create_tex_vec(c["name"])
         ]
         vec["sympy array"] = sym.Matrix(sym.symbols(array))
 
@@ -262,7 +262,7 @@ def tex_with_dims(tex_symbol, dim):
         return [tex_symbol + r"_{" + i + r"}" for i in dimensions]
 
 
-def get_tex_vec(target_value):
+def create_tex_vec(target_value):
     item = get_def(target_value)
     return tex_with_dims(item["latex"], item["dims"])
 
@@ -290,6 +290,10 @@ _add_vec_sympy_matrices()
 # ==================
 
 
+def normalize_vector(vec):
+    return vec / np.linalg.norm(vec)
+
+
 def R(q):
     """
     turns input quaternion into rotation matrix to be multiplied from the left to a vector
@@ -303,7 +307,7 @@ def R(q):
         [2 * (qx * qy + qz * qw), 1 - 2 * (qx**2 + qz**2), 2 * (qy * qz - qx * qw)],
         [2 * (qx * qz - qy * qw), 2 * (qy * qz + qx * qw), 1 - 2 * (qx**2 + qy**2)],
     ]
-    return match_output_to_input_type(q, rotation_matrix)
+    return _match_output_to_input_type(q, rotation_matrix)
 
 
 def quat_from_axis_angle(Phi, small_angle=True):
@@ -333,7 +337,7 @@ def skew_symmetric_matrix(omega):
     """
     omega_x, omega_y, omega_z = omega[0], omega[1], omega[2]
     matrix = [[0, -omega_z, omega_y], [omega_z, 0, -omega_x], [-omega_y, omega_x, 0]]
-    return match_output_to_input_type(omega, matrix)
+    return _match_output_to_input_type(omega, matrix)
 
 
 def quat_inv(q):
@@ -344,7 +348,7 @@ def quat_inv(q):
     :return: quaternion inverse
     """
     inverse = [q[0], -q[1], -q[2], -q[3]]
-    return match_output_to_input_type(q, inverse)
+    return _match_output_to_input_type(q, inverse)
 
 
 def left_quat_matrix(q):
@@ -355,10 +359,10 @@ def left_quat_matrix(q):
         [qy, qz, qw, -qx],
         [qz, -qy, qx, qw],
     ]
-    return match_output_to_input_type(q, matrix)
+    return _match_output_to_input_type(q, matrix)
 
 
-def match_output_to_input_type(var, output):
+def _match_output_to_input_type(var, output):
     """
     helps return the correct type, based on the input type
 
