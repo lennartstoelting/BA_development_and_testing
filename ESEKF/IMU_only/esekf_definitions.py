@@ -79,7 +79,7 @@ def _create_component(name: str, var: str, tex: str, dims: int):
         "var": var,
         "tex": tex,
         "dims": dims,
-        "components": sub_components,
+        "sub_components": sub_components,
     }
 
 
@@ -98,6 +98,7 @@ def _add_components_slice():
         vec["length"] = current_index
 
 
+# diese hier möchte ich gerne weghaben
 def _add_vec_sympy_matrices():
     """
     add sympy matrices as the symbolic representation of the vector components
@@ -266,6 +267,7 @@ def get_def(target_value, target_key="name", node=esekf_vectors):
     return None
 
 
+# diese hier soll auch weg gehen
 def tex_with_dims(tex_symbol, dim):
     """
     adds the dimensions for each tex symbol, example:
@@ -285,9 +287,15 @@ def tex_with_dims(tex_symbol, dim):
         return [tex_symbol + r"_{" + i + r"}" for i in dimensions]
 
 
+# auch diese hier scheint etwas zu groß, ich will das anders handeln
 def create_tex_vec(target_value):
     item = get_def(target_value)
     return tex_with_dims(item["tex"], item["dims"])
+
+
+def get_sub_components_as_sym(target_value, target_key="var"):
+    item = get_def(target_value, target_key)
+    return sym.Matrix(sym.symbols(item["sub_components"]))
 
 
 def get_sym_subarray(target_value, target_key="var"):
@@ -415,9 +423,9 @@ class Timer:
         return time_string
 
 
-for vec in esekf_vectors:
-    for comp in vec["components"]:
-        for index, (key, value) in enumerate(comp.items()):
-            print(f"{key}: {value}")
-        print("\n")
-    print(vec["sympy array"])
+# for vec in esekf_vectors:
+#     for comp in vec["components"]:
+#         for index, (key, value) in enumerate(comp.items()):
+#             print(f"{key}: {value}")
+#         print("\n")
+#     print(vec["sympy array"])
