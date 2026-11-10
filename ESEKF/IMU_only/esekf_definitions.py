@@ -44,27 +44,50 @@ calibration_dt = 3
 
 
 def _create_vector(name: str, var: str, tex: str, components: list):
+    """one time call to assemble the esekf_vectors into a list of dictionaries
+
+    Args:
+        name (str): Name of the vector
+        var (str): how the vector should be called in code
+        tex (str): string of latex math for display purposes
+        components (list): most vectors are stacked subcomponents or vectors
+
+    Returns:
+        _type_: the written out dictionary for this vector
+    """
     return {
         "name": name,
         "var": var,
-        "latex": tex,
+        "tex": tex,
         "components": ([_create_component(*c) for c in components]),
     }
 
 
 def _create_component(name: str, var: str, tex: str, dims: int):
+    sub_components = [tex]
+
+    if dims in (3, 4):
+        dimensions = ["x", "y", "z"] if dims == 3 else ["w", "x", "y", "z"]
+
+        if "_" in tex:
+            sub_components = [tex[:-1] + r"\," + d + r"}" for d in dimensions]
+        else:
+            sub_components = [tex + r"_{" + d + r"}" for d in dimensions]
+
     return {
         "name": name,
         "var": var,
-        "latex": tex,
+        "tex": tex,
         "dims": dims,
+        "components": sub_components,
     }
 
 
-def _add_components_index():
+def _add_components_slice():
     """
-    add the index for the range this component takes up\n
-    within the full array
+    adds the slice key to each (sub-)component dictionary
+    together with the start/stop index of the slice (range). \n
+    Also adds the length of each vector, adding up all the (sub-)components lengths (dims)
     """
     for vec in esekf_vectors:
         current_index = 0
@@ -210,7 +233,7 @@ esekf_vectors = [
                 # fmt: off
                 ["predicted gravity measurement", "a_g_h", r"a^{h}_{g}", 3],
                 ["predicted speaker position relative to camera", "p_s_h", r"p^{h}_{s}", 3],
-                ["predicted speaker orientation relative to camera", "q_s_h", r"q^{h}_{s}", 3],
+                ["predicted speaker orientation relative to camera", "q_s_h", r"q^{h}_{s}", 4],
                 ["predicted IMU yaw", "psi_h", r"\psi^{h}", 1],
                 # fmt: on
             ],
@@ -264,7 +287,7 @@ def tex_with_dims(tex_symbol, dim):
 
 def create_tex_vec(target_value):
     item = get_def(target_value)
-    return tex_with_dims(item["latex"], item["dims"])
+    return tex_with_dims(item["tex"], item["dims"])
 
 
 def get_sym_subarray(target_value, target_key="var"):
@@ -282,7 +305,7 @@ def get_sym_subarray(target_value, target_key="var"):
             return sym.Matrix(vec["sympy array"][item["slice"]])
 
 
-_add_components_index()
+_add_components_slice()
 _add_vec_sympy_matrices()
 
 # ==================
@@ -390,3 +413,11 @@ class Timer:
         time_string = f"(after {t - self.last_checkpoint:.2f}s, total {t - self.starting_time:.2f}s)"
         self.last_checkpoint = t
         return time_string
+
+
+for vec in esekf_vectors:
+    for comp in vec["components"]:
+        for index, (key, value) in enumerate(comp.items()):
+            print(f"{key}: {value}")
+        print("\n")
+    print(vec["sympy array"])
