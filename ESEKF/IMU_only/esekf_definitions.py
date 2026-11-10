@@ -20,7 +20,6 @@ in case aspects, naming or other concepts change later in the process
 # ==================
 
 # physical constants
-
 gravity_constant = 9.80665
 gravity_vector = [0, 0, -1 * gravity_constant]
 
@@ -366,10 +365,3 @@ class Timer:
         time_string = f"(after {t - self.last_checkpoint:.2f}s, total {t - self.starting_time:.2f}s)"
         self.last_checkpoint = t
         return time_string
-
-
-for vec in esekf_vectors:
-    for comp in vec["components"]:
-        for index, (key, value) in enumerate(comp.items()):
-            print(f"{key}: {value}")
-        print("\n")
