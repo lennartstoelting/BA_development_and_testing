@@ -30,9 +30,9 @@ IMU_cam_rotation = sym.Matrix(
 # nominal state
 # ===
 
-p_s = get_dims_as_sym("p_s")
-v_s = get_dims_as_sym("v_s")
-q_s = get_dims_as_sym("q_s")
+p_s = get_sympy_vec("p_s")
+v_s = get_sympy_vec("v_s")
+q_s = get_sympy_vec("q_s")
 
 x_s = sym.Matrix.vstack(p_s, v_s, q_s)
 
@@ -56,17 +56,17 @@ f_x_s = sym.Matrix.vstack(f_p_s, f_v_s, f_q_s)
 # error state
 # ===
 
-delta_p_s = get_dims_as_sym("delta_p_s")
-delta_v_s = get_dims_as_sym("delta_v_s")
-delta_theta_s = get_dims_as_sym("delta_theta_s")
+delta_p_s = get_sympy_vec("delta_p_s")
+delta_v_s = get_sympy_vec("delta_v_s")
+delta_theta_s = get_sympy_vec("delta_theta_s")
 
 delta_x_s = sym.Matrix.vstack(delta_p_s, delta_v_s, delta_theta_s)
 
 # kinematics
 
 # dontinuous
-delta_a_s_per = get_dims_as_sym("delta_a_s_per")
-delta_omega_s_per = get_dims_as_sym("delta_omega_s_per")
+delta_a_s_per = get_sympy_vec("delta_a_s_per")
+delta_omega_s_per = get_sympy_vec("delta_omega_s_per")
 
 delta_p_s_dot = delta_v_s
 delta_v_s_dot = delta_a_s_per
@@ -75,8 +75,8 @@ delta_theta_s_dot = delta_omega_s_per  # not defined, das muss ich noch ausarbei
 delta_x_s_dot = sym.Matrix.vstack(delta_p_s_dot, delta_v_s_dot, delta_theta_s_dot)
 
 # discrete
-delta_v_s_n = get_dims_as_sym("delta_v_s_n")
-delta_theta_s_n = get_dims_as_sym("delta_theta_s_n")
+delta_v_s_n = get_sympy_vec("delta_v_s_n")
+delta_theta_s_n = get_sympy_vec("delta_theta_s_n")
 
 delta_x_s_n = sym.Matrix.vstack(delta_v_s_n, delta_theta_s_n)
 

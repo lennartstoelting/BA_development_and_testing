@@ -254,7 +254,7 @@ def get_def(target_value, target_key="name", node=esekf_vectors):
     return None
 
 
-def get_dims_as_sym(target_value, target_key="var"):
+def get_sympy_vec(target_value, target_key="var"):
     item = get_def(target_value, target_key)
     return sym.Matrix(sym.symbols(item["dims"]))
 

@@ -16,8 +16,8 @@ gravity_vector_sym = sym.Matrix([0, 0, -1 * gravity_sym])
 # input
 # ===
 
-a_tilde = get_dims_as_sym("a_tilde")
-omega_tilde = get_dims_as_sym("omega_tilde")
+a_tilde = get_sympy_vec("a_tilde")
+omega_tilde = get_sympy_vec("omega_tilde")
 
 u_tilde = sym.Matrix.vstack(a_tilde, omega_tilde)
 
@@ -27,11 +27,11 @@ u_tilde = sym.Matrix.vstack(a_tilde, omega_tilde)
 
 # state
 
-p = get_dims_as_sym("p")
-v = get_dims_as_sym("v")
-q = get_dims_as_sym("q")
-a_b = get_dims_as_sym("a_b")
-omega_b = get_dims_as_sym("omega_b")
+p = get_sympy_vec("p")
+v = get_sympy_vec("v")
+q = get_sympy_vec("q")
+a_b = get_sympy_vec("a_b")
+omega_b = get_sympy_vec("omega_b")
 
 x_IMU = sym.Matrix.vstack(p, v, q, a_b, omega_b)
 
@@ -59,22 +59,22 @@ f_x_IMU = sym.Matrix.vstack(f_p, f_v, f_q, f_a_b, f_omega_b)
 # error state
 # ===
 
-delta_p = get_dims_as_sym("delta_p")
-delta_v = get_dims_as_sym("delta_v")
-delta_theta = get_dims_as_sym("delta_theta")
-delta_a_b = get_dims_as_sym("delta_a_b")
-delta_omega_b = get_dims_as_sym("delta_omega_b")
+delta_p = get_sympy_vec("delta_p")
+delta_v = get_sympy_vec("delta_v")
+delta_theta = get_sympy_vec("delta_theta")
+delta_a_b = get_sympy_vec("delta_a_b")
+delta_omega_b = get_sympy_vec("delta_omega_b")
 
 delta_x_IMU = sym.Matrix.vstack(delta_p, delta_v, delta_theta, delta_a_b, delta_omega_b)
 
 # kinematics
 
 # continuous
-a_tilde_n = get_dims_as_sym("a_tilde_n")
-omega_tilde_n = get_dims_as_sym("omega_tilde_n")
+a_tilde_n = get_sympy_vec("a_tilde_n")
+omega_tilde_n = get_sympy_vec("omega_tilde_n")
 
-a_b_tilde_n = get_dims_as_sym("a_b_tilde_n")
-omega_b_tilde_n = get_dims_as_sym("omega_b_tilde_n")
+a_b_tilde_n = get_sympy_vec("a_b_tilde_n")
+omega_b_tilde_n = get_sympy_vec("omega_b_tilde_n")
 
 delta_p_dot = delta_v
 delta_v_dot = (
@@ -95,10 +95,10 @@ delta_x_IMU_dot = sym.Matrix.vstack(
 )
 
 # discrete
-delta_v_n = get_dims_as_sym("delta_v_n")
-delta_theta_n = get_dims_as_sym("delta_theta_n")
-delta_a_b_n = get_dims_as_sym("delta_a_b_n")
-delta_omega_b_n = get_dims_as_sym("delta_omega_b_n")
+delta_v_n = get_sympy_vec("delta_v_n")
+delta_theta_n = get_sympy_vec("delta_theta_n")
+delta_a_b_n = get_sympy_vec("delta_a_b_n")
+delta_omega_b_n = get_sympy_vec("delta_omega_b_n")
 
 delta_x_n_IMU = sym.Matrix.vstack(
     delta_v_n, delta_theta_n, delta_a_b_n, delta_omega_b_n
