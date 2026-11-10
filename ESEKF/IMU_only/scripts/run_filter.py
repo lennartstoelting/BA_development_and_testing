@@ -13,15 +13,21 @@ it's only the middleman
 import numpy as np
 import pandas as pd
 import os
+import sys
 
-from theory.esekf_definitions import *
-from esekf_class import Filter
-from esekf_plot import *
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from modules import *
+from modules.filter_class import Filter
+from scripts.plot_filter_results import *
 
 
 recordings_folder = "../csv_files_of_neon_recordings/"
 
-state_history_output = "IMU_input_and_states_over_time.csv"
+state_history_output = "./out/IMU_input_and_states_over_time.csv"
 
 
 def main():

@@ -1,8 +1,8 @@
 import sympy as sym
 import numpy as np
 
-from .esekf_definitions import *
-from .esekf_IMU_kinematics_sym import *
+from modules import *
+from modules.IMU_kinematics_sym import *
 
 # ===
 # fixed values

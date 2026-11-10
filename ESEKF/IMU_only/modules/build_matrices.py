@@ -2,9 +2,9 @@ import sympy as sym
 import numpy as np
 import dill
 
-from theory.esekf_definitions import *
-from theory.esekf_IMU_kinematics_sym import *
-from theory.esekf_Speaker_kinematics_sym import *
+from modules import *
+from modules.IMU_kinematics_sym import *
+from modules.Speaker_kinematics_sym import *
 
 
 def assert_inputs_match(expr, input_symbols, name):
