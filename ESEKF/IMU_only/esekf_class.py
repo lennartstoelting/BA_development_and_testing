@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import dill
 
-from esekf_definitions import *
+from theory.esekf_definitions import *
 
 
 with open(f"filter_funcs_IMU_only.pkl", "rb") as f:

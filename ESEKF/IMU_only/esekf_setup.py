@@ -14,8 +14,8 @@ import numpy as np
 import pandas as pd
 import os
 
+from theory.esekf_definitions import *
 from esekf_class import Filter
-from esekf_definitions import *
 from esekf_plot import *
 
 

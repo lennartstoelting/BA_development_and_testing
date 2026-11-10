@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation
 
-from esekf_definitions import *
+from theory.esekf_definitions import *
 
 
 def pyplot_input_and_state_grid(output_file_name, input_file_name):
