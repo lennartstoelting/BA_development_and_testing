@@ -120,13 +120,13 @@ def plot_data(history_array, input_file_path, output):
     df = pd.DataFrame(
         history_array,
         columns=[
-            *create_tex_vec("IMU position"),
-            *create_tex_vec("IMU velocity"),
-            *create_tex_vec("IMU orientation"),
-            *create_tex_vec("IMU accel bias"),
-            *create_tex_vec("IMU gyro bias"),
-            *create_tex_vec("IMU accelerometer (m/s^2)"),
-            *create_tex_vec("IMU gyroscope (rad/s)"),
+            *get_def("IMU position")["sub_components"],
+            *get_def("IMU velocity")["sub_components"],
+            *get_def("IMU orientation")["sub_components"],
+            *get_def("IMU accel bias")["sub_components"],
+            *get_def("IMU gyro bias")["sub_components"],
+            *get_def("IMU accelerometer (m/s^2)")["sub_components"],
+            *get_def("IMU gyroscope (rad/s)")["sub_components"],
             "time",
         ],
     )

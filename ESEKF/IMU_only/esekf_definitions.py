@@ -83,34 +83,6 @@ def _create_component(name: str, var: str, tex: str, dims: int):
     }
 
 
-def _add_components_slice():
-    """
-    adds the slice key to each (sub-)component dictionary
-    together with the start/stop index of the slice (range). \n
-    Also adds the length of each vector, adding up all the (sub-)components lengths (dims)
-    """
-    for vec in esekf_vectors:
-        current_index = 0
-        for component in vec["components"]:
-            dims = component["dims"]
-            component["slice"] = slice(current_index, current_index + dims)
-            current_index += dims
-        vec["length"] = current_index
-
-
-# diese hier möchte ich gerne weghaben
-def _add_vec_sympy_matrices():
-    """
-    add sympy matrices as the symbolic representation of the vector components
-    """
-    for vec in esekf_vectors:
-        definition = get_def(vec["name"])
-        array = [
-            vec for c in definition["components"] for vec in create_tex_vec(c["name"])
-        ]
-        vec["sympy array"] = sym.Matrix(sym.symbols(array))
-
-
 esekf_vectors = [
     _create_vector(*v)
     for v in [
@@ -243,6 +215,24 @@ esekf_vectors = [
 ]
 
 
+def _add_components_slice():
+    """
+    adds the slice key to each (sub-)component dictionary
+    together with the start/stop index of the slice (range). \n
+    Also adds the length of each vector, adding up all the (sub-)components lengths (dims)
+    """
+    for vec in esekf_vectors:
+        current_index = 0
+        for component in vec["components"]:
+            dims = component["dims"]
+            component["slice"] = slice(current_index, current_index + dims)
+            current_index += dims
+        vec["length"] = current_index
+
+
+_add_components_slice()
+
+
 # ==================
 # variables dictionary helper functions
 # ==================
@@ -267,54 +257,10 @@ def get_def(target_value, target_key="name", node=esekf_vectors):
     return None
 
 
-# diese hier soll auch weg gehen
-def tex_with_dims(tex_symbol, dim):
-    """
-    adds the dimensions for each tex symbol, example:
-    input: (r"p", 3), output: [r"p_{x}", r"p_{y}", r"p_{z}"]
-
-    adds x,y,z to inputs with three dimensions
-    adds w,x,y,z to inputs with four dimensions
-
-    :return: array of strings, formatted to fit standard latex notation
-    """
-    if dim not in (3, 4):
-        return [tex_symbol]
-    dimensions = ["x", "y", "z"] if dim == 3 else ["w", "x", "y", "z"]
-    if "_" in tex_symbol:
-        return [tex_symbol[:-1] + r"\," + i + r"}" for i in dimensions]
-    else:
-        return [tex_symbol + r"_{" + i + r"}" for i in dimensions]
-
-
-# auch diese hier scheint etwas zu groß, ich will das anders handeln
-def create_tex_vec(target_value):
-    item = get_def(target_value)
-    return tex_with_dims(item["tex"], item["dims"])
-
-
 def get_sub_components_as_sym(target_value, target_key="var"):
     item = get_def(target_value, target_key)
     return sym.Matrix(sym.symbols(item["sub_components"]))
 
-
-def get_sym_subarray(target_value, target_key="var"):
-    """
-    get sympy symbols for the components of each vector, just by inputing the variable.
-    useful because the vectors sympy matrix is only stored as one big array, getting the matching subarray is difficult
-    """
-    item = get_def(target_value, target_key)
-    for vec in esekf_vectors:
-        res = next(
-            (c for c in vec["components"] if c == item),
-            None,
-        )
-        if res:
-            return sym.Matrix(vec["sympy array"][item["slice"]])
-
-
-_add_components_slice()
-_add_vec_sympy_matrices()
 
 # ==================
 # math helper functions
