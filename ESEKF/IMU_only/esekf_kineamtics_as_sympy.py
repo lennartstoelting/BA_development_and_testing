@@ -43,11 +43,6 @@ omega_tilde = get_dims_as_sym("omega_tilde")
 
 u_tilde = sym.Matrix.vstack(a_tilde, omega_tilde)
 
-a_tilde_n = get_dims_as_sym("a_tilde_n")
-omega_tilde_n = get_dims_as_sym("omega_tilde_n")
-
-u_tilde_n = sym.Matrix.vstack(a_tilde_n, omega_tilde_n)
-
 
 # ===
 # nominal state
@@ -119,18 +114,15 @@ delta_omega_b = get_dims_as_sym("delta_omega_b")
 
 delta_x_IMU = sym.Matrix.vstack(delta_p, delta_v, delta_theta, delta_a_b, delta_omega_b)
 
-delta_v_n = get_dims_as_sym("delta_v_n")
-delta_theta_n = get_dims_as_sym("delta_theta_n")
-delta_a_b_n = get_dims_as_sym("delta_a_b_n")
-delta_omega_b_n = get_dims_as_sym("delta_omega_b_n")
-
-delta_x_n_IMU = sym.Matrix.vstack(
-    delta_v_n, delta_theta_n, delta_a_b_n, delta_omega_b_n
-)
-
 # IMU kinematics
 
 # Continuous
+a_tilde_n = get_dims_as_sym("a_tilde_n")
+omega_tilde_n = get_dims_as_sym("omega_tilde_n")
+
+a_b_tilde_n = get_dims_as_sym("a_b_tilde_n")
+omega_b_tilde_n = get_dims_as_sym("omega_b_tilde_n")
+
 delta_p_dot = delta_v
 delta_v_dot = (
     -R(q) * skew_symmetric_matrix(a_tilde - a_b) * delta_theta
@@ -144,14 +136,23 @@ delta_theta_dot = (
 )
 # TODO a_b_n existiert noch gar nicht weil ichs bisher nicht brauchte
 # ich könnte fürs Erste einfach die noise Werte vom discrete case benutzen, ich will es ja nur in der observability nachweisen
-delta_a_b_dot = delta_a_b_n  # technically wrong
-delta_omega_b_dot = delta_omega_b_n  # technically wrong
+delta_a_b_dot = a_b_tilde_n  # technically wrong
+delta_omega_b_dot = omega_b_tilde_n  # technically wrong
 
 delta_x_IMU_dot = sym.Matrix.vstack(
     delta_p_dot, delta_v_dot, delta_theta_dot, delta_a_b_dot, delta_omega_b_dot
 )
 
 # Discrete
+delta_v_n = get_dims_as_sym("delta_v_n")
+delta_theta_n = get_dims_as_sym("delta_theta_n")
+delta_a_b_n = get_dims_as_sym("delta_a_b_n")
+delta_omega_b_n = get_dims_as_sym("delta_omega_b_n")
+
+delta_x_n_IMU = sym.Matrix.vstack(
+    delta_v_n, delta_theta_n, delta_a_b_n, delta_omega_b_n
+)
+
 f_delta_p = delta_p + delta_v * dt
 f_delta_v = (
     delta_v
@@ -179,21 +180,24 @@ delta_theta_s = get_dims_as_sym("delta_theta_s")
 
 delta_x_s = sym.Matrix.vstack(delta_p_s, delta_v_s, delta_theta_s)
 
+# Speaker kinematics
+
+# Continuous
+delta_a_s_per = get_dims_as_sym("delta_a_s_per")
+delta_omega_s_per = get_dims_as_sym("delta_omega_s_per")
+
+delta_p_s_dot = delta_v_s
+delta_v_s_dot = delta_a_s_per
+delta_theta_s_dot = delta_omega_s_per  # not defined, das muss ich noch ausarbeiten
+
+delta_x_s_dot = sym.Matrix.vstack(delta_p_s_dot, delta_v_s_dot, delta_theta_s_dot)
+
+# Discrete
 delta_v_s_n = get_dims_as_sym("delta_v_s_n")
 delta_theta_s_n = get_dims_as_sym("delta_theta_s_n")
 
 delta_x_s_n = sym.Matrix.vstack(delta_v_s_n, delta_theta_s_n)
 
-# Speaker kinematics
-
-# Continuous
-delta_p_s_dot = delta_v_s
-delta_v_s_dot = delta_v_s_n
-delta_theta_s_dot = delta_theta_s_n  # not defined, das muss ich noch ausarbeiten
-
-delta_x_s_dot = sym.Matrix.vstack(delta_p_s_dot, delta_v_s_dot, delta_theta_s_dot)
-
-# Discrete
 f_delta_p_s = delta_p_s + delta_v_s * dt
 f_delta_v_s = delta_v_s + delta_v_s_n
 f_delta_theta_s = delta_theta_s + delta_theta_s_n

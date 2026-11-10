@@ -153,7 +153,20 @@ esekf_vectors = [
             ],
         ],
         [
-            "IMU process noise",
+            "IMU input noise & perturbations (continuous time)",
+            "u_tilde_n",
+            r"\tilde{u}_{n}",
+            [
+                # fmt: off
+                ["IMU accelerometer noise (m/s^2)", "a_tilde_n", r"\tilde{a}_{n}", 3],
+                ["IMU gyroscope noise (rad/s)", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
+                ["IMU accel bias perturbations", "a_b_tilde_n", r"\tilde{a}_{bn}", 3],
+                ["IMU gyro bias perturbations", "omega_b_tilde_n", r"\tilde{\omega}_{bn}", 3],
+                # fmt: on
+            ],
+        ],
+        [
+            "IMU process noise (discrete time)",
             "delta_x_n_IMU",
             r"\delta{x}_{IMUn}",
             [
@@ -166,8 +179,19 @@ esekf_vectors = [
             ],
         ],
         [
-            "Speaker process noise",
-            "delta_x_n_s",
+            "Speaker perturbations (continuous time)",
+            "delta_x_s_per",
+            r"\delta{x}_{s\text{per}}",
+            [
+                # fmt: off
+                ["Speaker velocity error perturbations", "delta_a_s_per", r"\delta{a}_{s\text{per}}", 3],
+                ["Speaker orientation error perturbations", "delta_omega_s_per", r"\delta{\omega}_{s\text{per}}", 3],
+                # fmt: on
+            ],
+        ],
+        [
+            "Speaker process noise (discrete time)",
+            "delta_x_s_n",
             r"\delta{x}_{sn}",
             [
                 # fmt: off
@@ -183,17 +207,6 @@ esekf_vectors = [
             [
                 ["IMU accelerometer (m/s^2)", "a_tilde", r"\tilde{a}", 3],
                 ["IMU gyroscope (rad/s)", "omega_tilde", r"\tilde{\omega}", 3],
-            ],
-        ],
-        [
-            "IMU input noise",
-            "u_tilde_n",
-            r"\tilde{u}_{n}",
-            [
-                # fmt: off
-                ["IMU accelerometer noise (m/s^2)", "a_tilde_n", r"\tilde{a}_{n}", 3],
-                ["IMU gyroscope noise (rad/s)", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
-                # fmt: on
             ],
         ],
         [
