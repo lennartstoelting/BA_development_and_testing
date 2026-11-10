@@ -7,7 +7,7 @@ from esekf_definitions import *
 
 
 def pyplot_input_and_state_grid(output_file_name, input_file_name):
-    q_sym = get_def("IMU orientation")["sub_components"]
+    q_sym = get_def("IMU orientation")["dims"]
 
     df = pd.read_csv(output_file_name)
     time = df["time"].values
@@ -45,7 +45,7 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
         if plot["name"] == "IMU orientation" or plot["name"] == "empty plot":
             continue
         for index, curve in enumerate(["red", "green", "blue"]):
-            latex_string = get_def(plot["name"])["sub_components"][index]
+            latex_string = get_def(plot["name"])["dims"][index]
             axs[plot["row"], plot["col"]].plot(
                 time, df[latex_string], label="$" + latex_string + "$", color=curve
             )

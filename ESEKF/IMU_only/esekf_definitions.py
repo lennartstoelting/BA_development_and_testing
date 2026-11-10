@@ -78,8 +78,7 @@ def _create_component(name: str, var: str, tex: str, dims: int):
         "name": name,
         "var": var,
         "tex": tex,
-        "dims": dims,
-        "sub_components": sub_components,
+        "dims": sub_components,
     }
 
 
@@ -224,7 +223,7 @@ def _add_components_slice():
     for vec in esekf_vectors:
         current_index = 0
         for component in vec["components"]:
-            dims = component["dims"]
+            dims = len(component["dims"])
             component["slice"] = slice(current_index, current_index + dims)
             current_index += dims
         vec["length"] = current_index
@@ -257,9 +256,9 @@ def get_def(target_value, target_key="name", node=esekf_vectors):
     return None
 
 
-def get_sub_components_as_sym(target_value, target_key="var"):
+def get_dims_as_sym(target_value, target_key="var"):
     item = get_def(target_value, target_key)
-    return sym.Matrix(sym.symbols(item["sub_components"]))
+    return sym.Matrix(sym.symbols(item["dims"]))
 
 
 # ==================
@@ -369,9 +368,8 @@ class Timer:
         return time_string
 
 
-# for vec in esekf_vectors:
-#     for comp in vec["components"]:
-#         for index, (key, value) in enumerate(comp.items()):
-#             print(f"{key}: {value}")
-#         print("\n")
-#     print(vec["sympy array"])
+for vec in esekf_vectors:
+    for comp in vec["components"]:
+        for index, (key, value) in enumerate(comp.items()):
+            print(f"{key}: {value}")
+        print("\n")
