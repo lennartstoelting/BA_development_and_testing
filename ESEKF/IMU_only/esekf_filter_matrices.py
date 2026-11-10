@@ -1,5 +1,6 @@
 import sympy as sym
 import numpy as np
+import dill
 
 from theory.esekf_definitions import *
 from theory.esekf_IMU_kinematics_sym import *
@@ -29,7 +30,7 @@ def assert_inputs_match(expr, input_symbols, name):
 # ---
 # I need to set the order of inputs that will later be used when calling the function.
 # In this case I decide on f(*x, *u, gravity, dt)
-f_x_IMU_input_symbols = list(x_IMU) + list(u_tilde) + [gravity] + [dt]
+f_x_IMU_input_symbols = list(x_IMU) + list(u_tilde) + [gravity_sym] + [dt]
 assert_inputs_match(f_x_IMU, f_x_IMU_input_symbols, "f_x_IMU")
 f_x_IMU_lambdified = sym.lambdify(f_x_IMU_input_symbols, f_x_IMU, "numpy")
 
@@ -70,7 +71,7 @@ Q_lambdified = sym.lambdify(Q_diagonal, Q, "numpy")
 # ---
 # similar to the observability tests, I need to decide which measurements to include
 h = sym.Matrix.vstack(g_h)  # ,p_h, psi_h
-h_input_symbols = list(q) + list(a_b) + [gravity]
+h_input_symbols = list(q) + list(a_b) + [gravity_sym]
 assert_inputs_match(h, h_input_symbols, "h")
 h_lambdified = sym.lambdify(h_input_symbols, h, "numpy")
 
@@ -78,7 +79,7 @@ h_lambdified = sym.lambdify(h_input_symbols, h, "numpy")
 H_delta_x = h.jacobian(x_IMU) * x_IMU_true.jacobian(delta_x_IMU)
 H_delta_x = H_delta_x.subs({var: 0 for var in delta_x_IMU})
 H_delta_x = sym.simplify(H_delta_x)
-H_delta_x_input_symbols = list(q) + [gravity]
+H_delta_x_input_symbols = list(q) + [gravity_sym]
 assert_inputs_match(H_delta_x, H_delta_x_input_symbols, "H_delta_x")
 H_delta_x_lambdified = sym.lambdify(H_delta_x_input_symbols, H_delta_x, "numpy")
 
