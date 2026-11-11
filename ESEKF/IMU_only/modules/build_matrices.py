@@ -101,7 +101,7 @@ for i in range(len(h)):
 V = sym.diag(*V_diagonal)
 V_lambdified = sym.lambdify(V_diagonal, V, "numpy")
 
-with open("filter_funcs_IMU_only.pkl", "wb") as f:
+with open(os.path.join(project_root, "out", "filter_funcs_IMU_only.pkl"), "wb") as f:
     dill.dump(
         {
             "f_x_IMU": f_x_IMU_lambdified,

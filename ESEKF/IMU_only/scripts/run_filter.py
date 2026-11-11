@@ -27,9 +27,9 @@ from modules.filter_class import Filter
 from scripts.plot_filter_results import *
 
 
-recordings_folder = "../csv_files_of_neon_recordings/"
+recordings_folder = "../../csv_files_of_neon_recordings/"
 
-state_history_output = "./out/IMU_input_and_states_over_time.csv"
+state_history_output = "../out/IMU_input_and_states_over_time.csv"
 
 
 def main():

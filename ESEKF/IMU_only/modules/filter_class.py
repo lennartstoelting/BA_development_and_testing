@@ -14,11 +14,7 @@ if project_root not in sys.path:
 from modules import *
 
 
-# Get the directory of the current file, then go up one level to 'IMU_only'
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-pkl_path = os.path.join(project_root, "out", "filter_funcs_IMU_only.pkl")
-
-with open(pkl_path, "rb") as f:
+with open(os.path.join(project_root, "out", "filter_funcs_IMU_only.pkl"), "rb") as f:
     esekf_funcs = dill.load(f)
 
 
