@@ -44,8 +44,11 @@ def main():
 
     # run filter
     esekf = Filter()
+    print(f"determinant of covariance P at the start: {np.linalg.det(esekf.P)}")
     for index, row in imu_data.iterrows():
         esekf.process_IMU_sample(row)
+
+    print(f"determinant of covariance P at the end: {np.linalg.det(esekf.P)}")
 
     # plot results
     plot_data(

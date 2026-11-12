@@ -136,7 +136,6 @@ class Filter:
         for i in self.x:
             print(i)
         """
-        print(f"determinant of covariance P at the start: {np.linalg.det(self.P)}")
 
         self.accel_calibration_buffer = []
         self.gyro_calibration_buffer = []
@@ -185,11 +184,29 @@ class Filter:
         )
 
     def _initialize_process_noise_covariance_matrix_Q(self):
+        accelNSD_mug = 230  # unit mug/√Hz
+        gyroNSD_deg = 0.015  # dps/√Hz
+
+        # unit conversion
+        accelNSD = g2ms2(accelNSD_mug * 1e-6)
+        gyroNSD = np.deg2rad(gyroNSD_deg)
+
+        # multiplied by bandwidth to get standard deviation
+        sigma_accel = accelNSD * np.sqrt(IMU_sample_freq)
+        sigma_gyro = gyroNSD * np.sqrt(IMU_sample_freq)
+
+        # square sigma for variance and multiply by dt^2
+        variance_accel = (sigma_accel**2) * ((1 / IMU_sample_freq) ** 2)
+        variance_gyro = (sigma_gyro**2) * ((1 / IMU_sample_freq) ** 2)
+
+        print(f"variance accel: {variance_accel},\nvariance gyro: {variance_gyro}")
+
+        # vorher hatte ich 1e-5 überall, halt komplett ins blaue geschätzt
         process_noise = {
-            "velocity": 1e-5,
-            "orientation": 1e-5,
-            "accel_bias": 1e-5,
-            "gyro_bias": 1e-5,
+            "velocity": variance_accel,
+            "orientation": variance_gyro,
+            "accel_bias": 9e-9,  # guess
+            "gyro_bias": 4e-12,  # guess
         }
 
         process_noise_order = ["velocity", "orientation", "accel_bias", "gyro_bias"]

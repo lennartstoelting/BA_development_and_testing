@@ -9,10 +9,8 @@ import sys
 
 # physical constants
 gravity_constant = 9.80665
-gravity_vector = [0, 0, -1 * gravity_constant]
-
-# unit conversions
 g2ms2 = lambda g: g * gravity_constant
+gravity_vector = [0, 0, g2ms2(-1)]
 
 # system constants
 # \Delta p_{I \to c}
@@ -23,6 +21,9 @@ IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0
 
 # length of timewindow at the start for IMU calibration in seconds
 calibration_dt = 3
+
+# estimate of running average over multiple recordings
+IMU_sample_freq = 103.5
 
 
 # ==================
