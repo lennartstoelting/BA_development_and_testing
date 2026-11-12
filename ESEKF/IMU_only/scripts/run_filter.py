@@ -133,8 +133,8 @@ def plot_data(history_array, input_file_path, output):
             *get_def("IMU orientation")["dims"],
             *get_def("IMU accel bias")["dims"],
             *get_def("IMU gyro bias")["dims"],
-            *get_def("IMU accelerometer (m/s^2)")["dims"],
-            *get_def("IMU gyroscope (rad/s)")["dims"],
+            *get_def("IMU accelerometer")["dims"],
+            *get_def("IMU gyroscope")["dims"],
             "time",
         ],
     )

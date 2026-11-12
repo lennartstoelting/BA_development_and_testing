@@ -1,5 +1,7 @@
 import sympy as sym
 import numpy as np
+import os
+import sys
 
 # ==================
 # constants
@@ -9,14 +11,14 @@ import numpy as np
 gravity_constant = 9.80665
 gravity_vector = [0, 0, -1 * gravity_constant]
 
-pi = 3.141592653589793
+# unit conversions
+g2ms2 = lambda g: g * gravity_constant
 
 # system constants
-
 # \Delta p_{I \to c}
 IMU_cam_translation_value = [0, -0.0013, -0.00662]
 # \Delta q_{I \to c}
-Phi_in_rad = 102 * (pi / 180)
+Phi_in_rad = np.deg2rad(102)
 IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
 
 # length of timewindow at the start for IMU calibration in seconds

@@ -1,6 +1,8 @@
 import sympy as sym
 import numpy as np
 import time
+import os
+import sys
 
 
 def normalize_vector(vec):

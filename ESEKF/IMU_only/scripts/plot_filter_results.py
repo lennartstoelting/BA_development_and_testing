@@ -40,8 +40,8 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     fig.suptitle(input_file_name)
 
     plots = [
-        {"name": "IMU accelerometer (m/s^2)", "row": 0, "col": 0},
-        {"name": "IMU gyroscope (rad/s)", "row": 0, "col": 1},
+        {"name": "IMU accelerometer", "row": 0, "col": 0},
+        {"name": "IMU gyroscope", "row": 0, "col": 1},
         {"name": "IMU velocity", "row": 1, "col": 0},
         {"name": "IMU orientation", "row": 1, "col": 1},
         {"name": "IMU position", "row": 2, "col": 0},

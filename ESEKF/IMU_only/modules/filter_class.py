@@ -59,10 +59,10 @@ class Filter:
 
         # fmt: off
         accel_in_g = np.array([data_row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
-        accel_in_m_ss = accel_in_g * gravity_constant
+        accel_in_m_ss = g2ms2(accel_in_g)
 
         gyro_in_deg_s = np.array([data_row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
-        gyro_in_rad_s = gyro_in_deg_s * (np.pi / 180.0)
+        gyro_in_rad_s = np.deg2rad(gyro_in_deg_s)
         # fmt: on
 
         if not self.start_time:
