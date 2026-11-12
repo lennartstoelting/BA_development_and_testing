@@ -48,7 +48,7 @@ def _create_vector(name: str, var: str, tex: str, components: list):
     }
 
 
-def _create_component(name: str, var: str, tex: str, dims: int):
+def _create_component(name: str, unit: str, var: str, tex: str, dims: int):
     sub_components = [tex]
 
     if dims in (3, 4):
@@ -61,6 +61,7 @@ def _create_component(name: str, var: str, tex: str, dims: int):
 
     return {
         "name": name,
+        "unit": unit,
         "var": var,
         "tex": tex,
         "dims": sub_components,
@@ -75,11 +76,11 @@ esekf_vectors = [
             "x_IMU",
             r"x_{IMU}",
             [
-                ["IMU position", "p", r"p", 3],
-                ["IMU velocity", "v", r"v", 3],
-                ["IMU orientation", "q", r"q", 4],
-                ["IMU accel bias", "a_b", r"a_{b}", 3],
-                ["IMU gyro bias", "omega_b", r"\omega_{b}", 3],
+                ["IMU position", "m", "p", r"p", 3],
+                ["IMU velocity", "m/s", "v", r"v", 3],
+                ["IMU orientation", "", "q", r"q", 4],
+                ["IMU accel bias", "m/s^2", "a_b", r"a_{b}", 3],
+                ["IMU gyro bias", "rad/s", "omega_b", r"\omega_{b}", 3],
             ],
         ],
         [
@@ -87,9 +88,9 @@ esekf_vectors = [
             "x_s",
             r"x_{s}",
             [
-                ["Speaker position", "p_s", r"p_{s}", 3],
-                ["Speaker velocity", "v_s", r"v_{s}", 3],
-                ["Speaker orientation", "q_s", r"q_{s}", 4],
+                ["Speaker position", "m", "p_s", r"p_{s}", 3],
+                ["Speaker velocity", "m/s", "v_s", r"v_{s}", 3],
+                ["Speaker orientation", "", "q_s", r"q_{s}", 4],
             ],
         ],
         [
@@ -97,11 +98,17 @@ esekf_vectors = [
             "delta_x_IMU",
             r"\delta{x}_{IMU}",
             [
-                ["IMU position error", "delta_p", r"\delta{p}", 3],
-                ["IMU velocity error", "delta_v", r"\delta{v}", 3],
-                ["IMU orientation error", "delta_theta", r"\delta{\theta}", 3],
-                ["IMU accel bias error", "delta_a_b", r"\delta{a}_{b}", 3],
-                ["IMU gyro bias error", "delta_omega_b", r"\delta{\omega}_{b}", 3],
+                ["IMU position error", "m", "delta_p", r"\delta{p}", 3],
+                ["IMU velocity error", "m/s", "delta_v", r"\delta{v}", 3],
+                ["IMU orientation error", "rad", "delta_theta", r"\delta{\theta}", 3],
+                ["IMU accel bias error", "m/s^2", "delta_a_b", r"\delta{a}_{b}", 3],
+                [
+                    "IMU gyro bias error",
+                    "rad/s",
+                    "delta_omega_b",
+                    r"\delta{\omega}_{b}",
+                    3,
+                ],
             ],
         ],
         [
@@ -110,9 +117,9 @@ esekf_vectors = [
             r"\delta{x}_{s}",
             [
                 # fmt: off
-                ["Speaker position error", "delta_p_s", r"\delta{p}_{s}", 3],
-                ["Speaker velocity error", "delta_v_s", r"\delta{v}_{s}", 3],
-                ["Speaker orientation error", "delta_theta_s", r"\delta{\theta}_{s}", 3],
+                ["Speaker position error", "m", "delta_p_s", r"\delta{p}_{s}", 3],
+                ["Speaker velocity error", "m/s", "delta_v_s", r"\delta{v}_{s}", 3],
+                ["Speaker orientation error", "rad", "delta_theta_s", r"\delta{\theta}_{s}", 3],
                 # fmt: on
             ],
         ],
@@ -121,11 +128,11 @@ esekf_vectors = [
             "x_hat_IMU",
             r"\hat{x}_{IMU}",
             [
-                ["IMU position true", "p_hat", r"\hat{p}", 3],
-                ["IMU velocity true", "v_hat", r"\hat{v}", 3],
-                ["IMU orientation true", "q_hat", r"\hat{q}", 4],
-                ["IMU accel bias true", "a_hat_b", r"\hat{a}_{b}", 3],
-                ["IMU gyro bias true", "omega_hat_b", r"\hat{\omega}_{b}", 3],
+                ["IMU position true", "m", "p_hat", r"\hat{p}", 3],
+                ["IMU velocity true", "m/s", "v_hat", r"\hat{v}", 3],
+                ["IMU orientation true", "", "q_hat", r"\hat{q}", 4],
+                ["IMU accel bias true", "m/s^2", "a_hat_b", r"\hat{a}_{b}", 3],
+                ["IMU gyro bias true", "rad/s", "omega_hat_b", r"\hat{\omega}_{b}", 3],
             ],
         ],
         [
@@ -133,9 +140,9 @@ esekf_vectors = [
             "x_hat_s",
             r"\hat{x}_{s}",
             [
-                ["Speaker position true", "p_hat_s", r"\hat{p}_{s}", 3],
-                ["Speaker velocity true", "v_hat_s", r"\hat{v}_{s}", 3],
-                ["Speaker orientation true", "q_hat_s", r"\hat{q}_{s}", 4],
+                ["Speaker position true", "m", "p_hat_s", r"\hat{p}_{s}", 3],
+                ["Speaker velocity true", "m/s", "v_hat_s", r"\hat{v}_{s}", 3],
+                ["Speaker orientation true", "", "q_hat_s", r"\hat{q}_{s}", 4],
             ],
         ],
         [
@@ -144,10 +151,10 @@ esekf_vectors = [
             r"\tilde{u}_{n}",
             [
                 # fmt: off
-                ["IMU accelerometer noise (m/s^2)", "a_tilde_n", r"\tilde{a}_{n}", 3],
-                ["IMU gyroscope noise (rad/s)", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
-                ["IMU accel bias perturbations", "a_b_tilde_n", r"\tilde{a}_{bn}", 3],
-                ["IMU gyro bias perturbations", "omega_b_tilde_n", r"\tilde{\omega}_{bn}", 3],
+                ["IMU accelerometer noise", "m/s^2", "a_tilde_n", r"\tilde{a}_{n}", 3],
+                ["IMU gyroscope noise", "rad/s", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
+                ["IMU accel bias perturbations", "m/s^3", "a_b_tilde_n", r"\tilde{a}_{bn}", 3],
+                ["IMU gyro bias perturbations", "rad/s^2", "omega_b_tilde_n", r"\tilde{\omega}_{bn}", 3],
                 # fmt: on
             ],
         ],
@@ -157,10 +164,10 @@ esekf_vectors = [
             r"\delta{x}_{IMUn}",
             [
                 # fmt: off
-                ["IMU velocity error noise", "delta_v_n", r"\delta{v}_{n}", 3],
-                ["IMU orientation error noise", "delta_theta_n", r"\delta{\theta}_{n}", 3],
-                ["IMU accel bias error noise", "delta_a_b_n", r"\delta{a}_{bn}", 3],
-                ["IMU gyro bias error noise", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
+                ["IMU velocity error noise", "m/s", "delta_v_n", r"\delta{v}_{n}", 3],
+                ["IMU orientation error noise", "rad", "delta_theta_n", r"\delta{\theta}_{n}", 3],
+                ["IMU accel bias error noise", "m/s^2", "delta_a_b_n", r"\delta{a}_{bn}", 3],
+                ["IMU gyro bias error noise", "rad/s", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
                 # fmt: on
             ],
         ],
@@ -170,8 +177,8 @@ esekf_vectors = [
             r"\delta{x}_{s\text{per}}",
             [
                 # fmt: off
-                ["Speaker velocity error perturbations", "delta_a_s_per", r"\delta{a}_{s\text{per}}", 3],
-                ["Speaker orientation error perturbations", "delta_omega_s_per", r"\delta{\omega}_{s\text{per}}", 3],
+                ["Speaker velocity error perturbations", "m/s^2", "delta_a_s_per", r"\delta{a}_{s\text{per}}", 3],
+                ["Speaker orientation error perturbations", "rad/s", "delta_omega_s_per", r"\delta{\omega}_{s\text{per}}", 3],
                 # fmt: on
             ],
         ],
@@ -181,8 +188,8 @@ esekf_vectors = [
             r"\delta{x}_{sn}",
             [
                 # fmt: off
-                ["Speaker velocity error noise", "delta_v_s_n", r"\delta{v}_{sn}", 3],
-                ["Speaker orientation error noise", "delta_theta_s_n", r"\delta{\theta}_{sn}", 3],
+                ["Speaker velocity error noise", "m/s", "delta_v_s_n", r"\delta{v}_{sn}", 3],
+                ["Speaker orientation error noise", "rad", "delta_theta_s_n", r"\delta{\theta}_{sn}", 3],
                 # fmt: on
             ],
         ],
@@ -191,20 +198,20 @@ esekf_vectors = [
             "u_tilde",
             r"\tilde{u}",
             [
-                ["IMU accelerometer (m/s^2)", "a_tilde", r"\tilde{a}", 3],
-                ["IMU gyroscope (rad/s)", "omega_tilde", r"\tilde{\omega}", 3],
+                ["IMU accelerometer", "m/s^2", "a_tilde", r"\tilde{a}", 3],
+                ["IMU gyroscope", "rad/s", "omega_tilde", r"\tilde{\omega}", 3],
             ],
         ],
         [
-            "predicted maesurements",
+            "predicted measurements",
             "h",
             r"h",
             [
                 # fmt: off
-                ["predicted gravity measurement", "a_g_h", r"a^{h}_{g}", 3],
-                ["predicted speaker position relative to camera", "p_s_h", r"p^{h}_{s}", 3],
-                ["predicted speaker orientation relative to camera", "q_s_h", r"q^{h}_{s}", 4],
-                ["predicted IMU yaw", "psi_h", r"\psi^{h}", 1],
+                ["predicted gravity measurement", "m/s^2", "a_g_h", r"a^{h}_{g}", 3],
+                ["predicted speaker position relative to camera", "m", "p_s_h", r"p^{h}_{s}", 3],
+                ["predicted speaker orientation relative to camera", "", "q_s_h", r"q^{h}_{s}", 4],
+                ["predicted IMU yaw", "rad", "psi_h", r"\psi^{h}", 1],
                 # fmt: on
             ],
         ],

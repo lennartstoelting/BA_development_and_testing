@@ -13,7 +13,6 @@ if project_root not in sys.path:
 
 from modules import *
 from modules.IMU_kinematics_sym import *
-from modules.Speaker_kinematics_sym import *
 
 
 def assert_inputs_match(expr, input_symbols, name):
