@@ -21,18 +21,11 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     df = pd.read_csv(output_file_name)
     time = df["time"].values
 
-    # Pre-calculate Euler angles
-    quats_df = df[[q_sym[1], q_sym[2], q_sym[3], q_sym[0]]].copy()
-
-    # Fill NaNs temporarily with an identity quaternion [0, 0, 0, 1] to prevent SciPy crash
-    quats_df[q_sym[1]] = quats_df[q_sym[1]].fillna(0.0)
-    quats_df[q_sym[2]] = quats_df[q_sym[2]].fillna(0.0)
-    quats_df[q_sym[3]] = quats_df[q_sym[3]].fillna(0.0)
-    quats_df[q_sym[0]] = quats_df[q_sym[0]].fillna(1.0)
+    quats_df = df[q_sym].copy()
 
     # Pre-calculate Euler angles
-    rotations = Rotation.from_quat(quats_df.values)
-    euler = rotations.as_euler("xyz", degrees=True)
+    rotations = Rotation.from_quat(quats_df.values, scalar_first=True)
+    euler = rotations.as_euler("yxz", degrees=True)
 
     df["roll"], df["pitch"], df["yaw"] = euler[:, 0], euler[:, 1], euler[:, 2]
 

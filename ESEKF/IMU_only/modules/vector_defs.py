@@ -234,7 +234,7 @@ def _add_components_slice():
             dims = len(component["dims"])
             component["slice"] = slice(current_index, current_index + dims)
             current_index += dims
-        vec["length"] = current_index
+        vec["len"] = current_index
 
 
 _add_components_slice()

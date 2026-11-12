@@ -108,7 +108,13 @@ class Filter:
         self.input_and_state_history.append(
             np.hstack(
                 [
-                    self.x.copy() if self.x is not None else None,
+                    (
+                        self.x.copy()
+                        if self.x is not None
+                        else np.eye(get_def("IMU nominal state")["len"])[
+                            6
+                        ]  # array full of zeroes except for where the quaternion need a one in the scalar
+                    ),
                     accel_in_m_ss,
                     gyro_in_rad_s,
                     self.elapsed_time,
@@ -161,7 +167,7 @@ class Filter:
         # gyro bias
         omega_b_init = gyro_mean
 
-        self.x = np.zeros(get_def("IMU nominal state")["length"])
+        self.x = np.zeros(get_def("IMU nominal state")["len"])
         # position and velocity start out at zero
         self.x[self.q_slice] = q_init
         self.x[self.a_b_slice] = a_b_init
@@ -171,25 +177,24 @@ class Filter:
         # for now, these values are trial and error
         # (low number -> low variance -> high certainty)
         initial_certainties = {
-            "position": 1e-5,
-            "velocity": 1e-5,
-            "orientation": 1e-5,
-            "accel_bias": 1e-5,
-            "gyro_bias": 1e-5,
+            "position": 1e-3,  # guess
+            "velocity": 1e-3,  # guess
+            "orientation": 5e-3,  # guess
+            "accel_bias": 0.06,  # guess
+            "gyro_bias": 2e-3,  # guess
         }
 
-        state_order = ["position", "velocity", "orientation", "accel_bias", "gyro_bias"]
         self.P = np.diag(
-            np.repeat([initial_certainties[key] for key in state_order], 3)
+            np.repeat([sigma_sqrd for _, sigma_sqrd in initial_certainties.items()], 3)
         )
 
     def _initialize_process_noise_covariance_matrix_Q(self):
-        accelNSD_mug = 230  # unit mug/√Hz
-        gyroNSD_deg = 0.015  # dps/√Hz
+        accelNSD_mug = 230  # mug/√Hz
+        gyroNSD_deg = 0.015  # d/s/√Hz
 
         # unit conversion
-        accelNSD = g2ms2(accelNSD_mug * 1e-6)
-        gyroNSD = np.deg2rad(gyroNSD_deg)
+        accelNSD = g2ms2(accelNSD_mug * 1e-6)  # m/s2/√Hz
+        gyroNSD = np.deg2rad(gyroNSD_deg)  # rad/s/√Hz
 
         # multiplied by bandwidth to get standard deviation
         sigma_accel = accelNSD * np.sqrt(IMU_sample_freq)
@@ -209,18 +214,17 @@ class Filter:
             "gyro_bias": 4e-12,  # guess
         }
 
-        process_noise_order = ["velocity", "orientation", "accel_bias", "gyro_bias"]
         self.Q = np.diag(
-            np.repeat([process_noise[key] for key in process_noise_order], 3)
+            np.repeat([sigma_sqrd for _, sigma_sqrd in process_noise.items()], 3)
         )
 
     def _initialize_measurement_noise_covariance_matrix_W(self):
-        measurement_noise = {"accel_gravity": 1e-5}
-
-        measurement_noise_order = ["accel_gravity"]
+        measurement_noise = {
+            "accel_gravity": 2.5e-3,  # guess
+        }
 
         self.W = np.diag(
-            np.repeat([measurement_noise[key] for key in measurement_noise_order], 3)
+            np.repeat([sigma_sqrd for _, sigma_sqrd in measurement_noise.items()], 3)
         )
 
     def _initialize_process_noise_jacobian_matrix_J(self):

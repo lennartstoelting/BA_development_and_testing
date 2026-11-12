@@ -76,12 +76,13 @@ def prompt_file_selection(input_files):
     # User is prompted in terminal to select out of the available recordings
     print("\nThe following IMU data files are available:\n")
     [print(f" {index} - {file}") for index, file in enumerate(input_files)]
+    print(f" q - abort script")
     selected_index_input = input("\nPlease select the input file by typing its index: ")
 
     file_name = None
 
     if selected_index_input == "q":
-        print("aborting script execution")
+        print("\naborted script execution\n")
         raise ValueError
 
     try:
