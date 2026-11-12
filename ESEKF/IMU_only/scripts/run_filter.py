@@ -44,11 +44,11 @@ def main():
 
     # run filter
     esekf = Filter()
-    print(f"determinant of covariance P at the start: {np.linalg.det(esekf.P)}")
+    print(f"\ndeterminant of covariance P at the start: {np.linalg.det(esekf.P)}")
     for index, row in imu_data.iterrows():
         esekf.process_IMU_sample(row)
 
-    print(f"determinant of covariance P at the end: {np.linalg.det(esekf.P)}")
+    print(f"\ndeterminant of covariance P at the end: {np.linalg.det(esekf.P)}")
 
     # plot results
     plot_data(
@@ -139,6 +139,7 @@ def plot_data(history_array, input_file_path, output):
             *get_def("IMU gyro bias")["dims"],
             *get_def("IMU accelerometer")["dims"],
             *get_def("IMU gyroscope")["dims"],
+            "covariance_temp",
             "time",
         ],
     )

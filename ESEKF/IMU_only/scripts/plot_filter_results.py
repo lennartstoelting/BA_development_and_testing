@@ -38,13 +38,13 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
         {"name": "IMU velocity", "row": 1, "col": 0},
         {"name": "IMU orientation", "row": 1, "col": 1},
         {"name": "IMU position", "row": 2, "col": 0},
-        {"name": "empty plot"},
+        {"name": "covariance plot"},
         {"name": "IMU accel bias", "row": 3, "col": 0},
         {"name": "IMU gyro bias", "row": 3, "col": 1},
     ]
 
     for plot in plots:
-        if plot["name"] == "IMU orientation" or plot["name"] == "empty plot":
+        if plot["name"] == "IMU orientation" or plot["name"] == "covariance plot":
             continue
         for index, curve in enumerate(["red", "green", "blue"]):
             latex_string = get_def(plot["name"])["dims"][index]
@@ -59,8 +59,9 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     axs[1, 1].plot(time, df["yaw"], label="Yaw")
     axs[1, 1].set_ylabel("Orientation (deg)")
 
-    # Empty space
-    axs[2, 1].axis("off")
+    # covariance plot
+    axs[2, 1].plot(time, df["covariance_temp"], label="det P")
+    axs[2, 1].set_ylabel("log scale")
 
     # time labels at the bottom
     axs[3, 0].set_xlabel("time (s)")

@@ -76,47 +76,25 @@ class Filter:
             self._calibration_step(accel_in_g, gyro_in_rad_s)
         else:
             dt = self.current_time - self.previous_time
+
             self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
-            # prediction step attempts
-            # static_accel_threshold = 0.1
-            # static_gyro_threshold = 0.1
-            # accel_seems_static = (
-            #     np.absolute(
-            #         np.linalg.norm(
-            #             accel_in_m_ss - esekf.x[get_def("IMU accel bias")["slice"]]
-            #         )
-            #         - gravity_constant
-            #     )
-            #     < static_accel_threshold
-            # )
-            # gyro_seems_static = (
-            #     np.linalg.norm(gyro_in_rad_s - esekf.x[get_def("IMU accel bias")["slice"]])
-            #     < static_gyro_threshold
-            # )
-            # if accel_seems_static and gyro_seems_static:
-            #     # print(
-            #     #     f"========================\ncorrection step now! (index {index}):\naccel: {accel_in_g}\ngyro: {gyro_in_deg_s}\n========================\n"
-            #     # )
-            # self._correction_step(accel_in_m_ss, gravity_constant)
-            # else:
-            #     corr_step_triggered += 1
-            #     # print(
-            #     #     f"measurements don't seem static (index: {index}):\naccel {accel_in_g}\ngyro {gyro_in_deg_s}\n"
-            #     # )
+
+            if self._IMU_seems_static(accel_in_m_ss, gyro_in_rad_s):
+
+                print("\n=== IMU seems static, triggering correction step")
+                print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
+                print(f"det of P before correction step {np.linalg.det(self.P)}")
+                self._correction_step(accel_in_m_ss)
+                print(f"det of P after correction step {np.linalg.det(self.P)}")
 
         # append to history for plotting
         self.input_and_state_history.append(
             np.hstack(
                 [
-                    (
-                        self.x.copy()
-                        if self.x is not None
-                        else np.eye(get_def("IMU nominal state")["len"])[
-                            6
-                        ]  # array full of zeroes except for where the quaternion need a one in the scalar
-                    ),
+                    self.x.copy(),
                     accel_in_m_ss,
                     gyro_in_rad_s,
+                    np.linalg.slogdet(self.P)[1],
                     self.elapsed_time,
                 ]
             )
@@ -127,6 +105,9 @@ class Filter:
     def _calibration_step(self, accel_in_g, gyro_in_rad_s):
         self.accel_calibration_buffer.append(accel_in_g)
         self.gyro_calibration_buffer.append(gyro_in_rad_s)
+
+        # placeholder array full of zeros except for where the quaternion need a one in the scalar
+        self.x = np.eye(get_def("IMU nominal state")["len"])[6]
 
         if self.elapsed_time < calibration_dt:
             # keep calibarting if we are not over the calibration time window
@@ -204,8 +185,6 @@ class Filter:
         variance_accel = (sigma_accel**2) * ((1 / IMU_sample_freq) ** 2)
         variance_gyro = (sigma_gyro**2) * ((1 / IMU_sample_freq) ** 2)
 
-        print(f"variance accel: {variance_accel},\nvariance gyro: {variance_gyro}")
-
         # vorher hatte ich 1e-5 überall, halt komplett ins blaue geschätzt
         process_noise = {
             "velocity": variance_accel,
@@ -247,6 +226,25 @@ class Filter:
         )
 
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
+
+    def _IMU_seems_static(self, accel_in_m_ss, gyro_in_rad_s) -> bool:
+        """using the data from accelerometer and gyro, are the values in range of a certain threshold
+        which lets us assume the IMU measures no additional acceleration or angle velocity
+        """
+        static_accel_threshold = 0.1
+        accel_absolute = np.absolute(
+            np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
+            - gravity_constant
+        )
+        accel_seems_static = accel_absolute < static_accel_threshold
+
+        static_gyro_threshold = 0.1
+        gyro_absolute = np.linalg.norm(
+            gyro_in_rad_s - self.x[get_def("IMU accel bias")["slice"]]
+        )
+        gyro_seems_static = gyro_absolute < static_gyro_threshold
+
+        return accel_seems_static and gyro_seems_static
 
     def _correction_step(self, a_tilde):
         H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
