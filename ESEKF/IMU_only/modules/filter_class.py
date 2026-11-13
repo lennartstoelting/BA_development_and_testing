@@ -84,8 +84,27 @@ class Filter:
                 print("\n=== IMU seems static, triggering correction step")
                 print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
                 print(f"det of P before correction step {np.linalg.det(self.P)}")
+                with np.printoptions(precision=3, suppress=True):
+                    print("P before:\n", self.P)
                 self._correction_step(accel_in_m_ss)
                 print(f"det of P after correction step {np.linalg.det(self.P)}")
+                with np.printoptions(precision=3, suppress=True):
+                    print("P after:\n", self.P)
+
+        accel_norm = np.absolute(
+            np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
+            - gravity_constant
+        )
+        gyro_norm = np.linalg.norm(
+            gyro_in_rad_s - self.x[get_def("IMU accel bias")["slice"]]
+        )
+
+        # very high values don't interest us, only the lower values are useful to determine when to cut off
+        accel_norm = accel_norm if accel_norm < 1.5 else 1.5
+        accel_norm = accel_norm if accel_norm < 1 else 1
+
+        accel_threshold = 0.2
+        gyro_threshold = 0.1
 
         # append to history for plotting
         self.input_and_state_history.append(
@@ -94,6 +113,10 @@ class Filter:
                     self.x.copy(),
                     accel_in_m_ss,
                     gyro_in_rad_s,
+                    accel_norm,
+                    accel_threshold,
+                    gyro_norm,
+                    gyro_threshold,
                     np.linalg.slogdet(self.P)[1],
                     self.elapsed_time,
                 ]
@@ -231,7 +254,7 @@ class Filter:
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
         which lets us assume the IMU measures no additional acceleration or angle velocity
         """
-        static_accel_threshold = 0.1
+        static_accel_threshold = 0.2
         accel_absolute = np.absolute(
             np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
             - gravity_constant

@@ -44,7 +44,10 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
     ]
 
     for plot in plots:
-        if plot["name"] == "IMU orientation" or plot["name"] == "covariance plot":
+        if plot["name"] in {
+            "IMU orientation",
+            "covariance plot",
+        }:
             continue
         for index, curve in enumerate(["red", "green", "blue"]):
             latex_string = get_def(plot["name"])["dims"][index]
@@ -65,7 +68,46 @@ def pyplot_input_and_state_grid(output_file_name, input_file_name):
 
     # time labels at the bottom
     axs[3, 0].set_xlabel("time (s)")
-    axs[3, 0].set_xlabel("time (s)")
+    axs[3, 1].set_xlabel("time (s)")
+
+    for ax in axs.flat:
+        if ax.has_data():
+            ax.legend(loc="best", fontsize="small")
+            ax.grid(True)
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+
+
+def pyplot_input_grid(output_file_name, input_file_name):
+    df = pd.read_csv(output_file_name)
+    time = df["time"].values
+
+    fig, axs = plt.subplots(2, 2, figsize=(16, 16))
+    fig.suptitle(input_file_name)
+
+    plots = [
+        {"name": "IMU accelerometer", "row": 0, "col": 0},
+        {"name": "IMU gyroscope", "row": 0, "col": 1},
+    ]
+
+    for plot in plots:
+        for index, curve in enumerate(["red", "green", "blue"]):
+            latex_string = get_def(plot["name"])["dims"][index]
+            axs[plot["row"], plot["col"]].plot(
+                time, df[latex_string], label="$" + latex_string + "$", color=curve
+            )
+        axs[plot["row"], plot["col"]].set_ylabel(plot["name"])
+
+    axs[1, 0].plot(time, df["accel_norm"], label="|accel_norm|", color="yellow")
+    axs[1, 0].plot(time, df["accel_threshold"], label="accel_threshold", color="black")
+
+    axs[1, 1].plot(time, df["gyro_norm"], label="|gyro_norm|", color="yellow")
+    axs[1, 1].plot(time, df["gyro_threshold"], label="gyro_threshold", color="black")
+
+    # time labels at the bottom
+    axs[1, 0].set_xlabel("time (s)")
+    axs[1, 1].set_xlabel("time (s)")
 
     for ax in axs.flat:
         if ax.has_data():

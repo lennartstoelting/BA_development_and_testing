@@ -139,13 +139,18 @@ def plot_data(history_array, input_file_path, output):
             *get_def("IMU gyro bias")["dims"],
             *get_def("IMU accelerometer")["dims"],
             *get_def("IMU gyroscope")["dims"],
+            "accel_norm",
+            "accel_threshold",
+            "gyro_norm",
+            "gyro_threshold",
             "covariance_temp",
             "time",
         ],
     )
     df.to_csv(output, index=False)
 
-    pyplot_input_and_state_grid(output, input_file_path)
+    # pyplot_input_and_state_grid(output, input_file_path)
+    pyplot_input_grid(output, input_file_path)
 
 
 if __name__ == "__main__":
