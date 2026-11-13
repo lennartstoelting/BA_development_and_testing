@@ -275,12 +275,18 @@ class Filter:
             *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
         ).flatten()
 
-        print(
-            f"\n{np.array2string(h, precision=3)} <- prediction of accelerometer measurement"
+        # fmt: off
+        print(f"\n{np.array2string(h, precision=3)} <- prediction of accelerometer measurement")
+        print(f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement\n")
+        # fmt: on
+
+        # Eigentlich könnte ich das was h macht ja hier händisch rechnen
+
+        h_test = (
+            R(self.x[self.q_slice]).T @ [0, 0, gravity_constant]
+            + self.x[self.a_b_slice]
         )
-        print(
-            f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement\n"
-        )
+        print(np.array2string(h_test, precision=3))
 
         try:
             K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
