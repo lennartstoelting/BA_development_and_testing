@@ -83,13 +83,13 @@ class Filter:
 
                 print("\n=== IMU seems static, triggering correction step")
                 print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
-                print(f"det of P before correction step {np.linalg.det(self.P)}")
+                print(f"det of P before correction step {np.linalg.det(self.P)}\n")
                 with np.printoptions(precision=3, suppress=True):
-                    print("P before:\n", self.P)
+                    print("P before:\n", np.array2string(self.P, precision=3))
                 self._correction_step(accel_in_m_ss)
-                print(f"det of P after correction step {np.linalg.det(self.P)}")
+                print(f"\ndet of P after correction step {np.linalg.det(self.P)}")
                 with np.printoptions(precision=3, suppress=True):
-                    print("P after:\n", self.P)
+                    print("P after:\n", np.array2string(self.P, precision=3))
 
         accel_norm = np.absolute(
             np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
@@ -275,6 +275,13 @@ class Filter:
             *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
         ).flatten()
 
+        print(
+            f"\n{np.array2string(h, precision=3)} <- prediction of accelerometer measurement"
+        )
+        print(
+            f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement\n"
+        )
+
         try:
             K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
         except np.linalg.LinAlgError:
@@ -287,6 +294,13 @@ class Filter:
             print("Determinant of S:", np.linalg.det(S))
             print(f"P matrix: {self.P}")
         delta_x = K @ (a_tilde - h)
+        # lesbarer print von delta_x
+        [
+            print(
+                f"{comp['name']}:\n{np.array2string(delta_x[comp['slice']], precision=3)}"
+            )
+            for comp in get_def("IMU error state")["components"]
+        ]
         self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
         self.P = (np.eye(15) - K @ H) @ np.linalg.inv(self.P)

@@ -150,7 +150,7 @@ def plot_data(history_array, input_file_path, output):
     df.to_csv(output, index=False)
 
     # pyplot_input_and_state_grid(output, input_file_path)
-    pyplot_input_grid(output, input_file_path)
+    # pyplot_input_grid(output, input_file_path)
 
 
 if __name__ == "__main__":

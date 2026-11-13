@@ -101,17 +101,13 @@ esekf_vectors = [
             "delta_x_IMU",
             r"\delta{x}_{IMU}",
             [
+                # fmt: off
                 ["IMU position error", "m", "delta_p", r"\delta{p}", 3],
                 ["IMU velocity error", "m/s", "delta_v", r"\delta{v}", 3],
                 ["IMU orientation error", "rad", "delta_theta", r"\delta{\theta}", 3],
                 ["IMU accel bias error", "m/s^2", "delta_a_b", r"\delta{a}_{b}", 3],
-                [
-                    "IMU gyro bias error",
-                    "rad/s",
-                    "delta_omega_b",
-                    r"\delta{\omega}_{b}",
-                    3,
-                ],
+                ["IMU gyro bias error", "rad/s", "delta_omega_b", r"\delta{\omega}_{b}", 3],
+                # fmt: on
             ],
         ],
         [
