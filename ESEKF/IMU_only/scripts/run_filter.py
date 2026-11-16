@@ -46,7 +46,7 @@ def main():
     esekf = Filter()
     print(f"\ndeterminant of covariance P at the start: {np.linalg.det(esekf.P)}")
     for index, row in imu_data.iterrows():
-        esekf.process_IMU_sample(row)
+        esekf.process_IMU_sample(row, index)
 
     print(f"\ndeterminant of covariance P at the end: {np.linalg.det(esekf.P)}")
 
@@ -149,8 +149,8 @@ def plot_data(history_array, input_file_path, output):
     )
     df.to_csv(output, index=False)
 
-    # pyplot_input_and_state_grid(output, input_file_path)
-    # pyplot_input_grid(output, input_file_path)
+    pyplot_input_grid(output, input_file_path)
+    pyplot_input_and_state_grid(output, input_file_path)
 
 
 if __name__ == "__main__":

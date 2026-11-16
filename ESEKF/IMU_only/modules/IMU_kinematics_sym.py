@@ -148,7 +148,7 @@ x_IMU_true = sym.Matrix.vstack(p_true, v_true, q_true, a_b_true, omega_b_true)
 # measurements
 # ===
 
-g_h = R(q).T * gravity_vector_sym + a_b
+g_h = R(q).T * -gravity_vector_sym + a_b
 
 p_h = p
 

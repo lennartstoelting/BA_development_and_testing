@@ -53,7 +53,7 @@ class Filter:
         self.state_history = []
         self.input_and_state_history = []
 
-    def process_IMU_sample(self, data_row):
+    def process_IMU_sample(self, data_row, sample_index):
         # prepare all inputs
         timestamp = data_row["timestamp [ns]"] / 1e9
 
@@ -81,23 +81,22 @@ class Filter:
 
             if self._IMU_seems_static(accel_in_m_ss, gyro_in_rad_s):
 
-                print("\n=== IMU seems static, triggering correction step")
+                print(
+                    f"\n=== IMU seems static, triggering correction step at sample {sample_index}"
+                )
                 print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
-                print(f"det of P before correction step {np.linalg.det(self.P)}\n")
-                with np.printoptions(precision=3, suppress=True):
-                    print("P before:\n", np.array2string(self.P, precision=3))
+                print(f"det of P before correction step {np.linalg.det(self.P)}")
+                # with np.printoptions(precision=3, suppress=True):
+                #     print("P before:\n", np.array2string(self.P, precision=3))
                 self._correction_step(accel_in_m_ss)
-                print(f"\ndet of P after correction step {np.linalg.det(self.P)}")
-                with np.printoptions(precision=3, suppress=True):
-                    print("P after:\n", np.array2string(self.P, precision=3))
+                print(f"det of P after correction step {np.linalg.det(self.P)}\n")
+                # with np.printoptions(precision=3, suppress=True):
+                #     print("P after:\n", np.array2string(self.P, precision=3))
 
         accel_norm = np.absolute(
-            np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
-            - gravity_constant
+            np.linalg.norm(accel_in_m_ss - self.x[self.a_b_slice]) - gravity_constant
         )
-        gyro_norm = np.linalg.norm(
-            gyro_in_rad_s - self.x[get_def("IMU accel bias")["slice"]]
-        )
+        gyro_norm = np.linalg.norm(gyro_in_rad_s - self.x[self.omega_b_slice])
 
         # very high values don't interest us, only the lower values are useful to determine when to cut off
         accel_norm = accel_norm if accel_norm < 1.5 else 1.5
@@ -256,15 +255,12 @@ class Filter:
         """
         static_accel_threshold = 0.2
         accel_absolute = np.absolute(
-            np.linalg.norm(accel_in_m_ss - self.x[get_def("IMU accel bias")["slice"]])
-            - gravity_constant
+            np.linalg.norm(accel_in_m_ss - self.x[self.a_b_slice]) - gravity_constant
         )
         accel_seems_static = accel_absolute < static_accel_threshold
 
         static_gyro_threshold = 0.1
-        gyro_absolute = np.linalg.norm(
-            gyro_in_rad_s - self.x[get_def("IMU accel bias")["slice"]]
-        )
+        gyro_absolute = np.linalg.norm(gyro_in_rad_s - self.x[self.omega_b_slice])
         gyro_seems_static = gyro_absolute < static_gyro_threshold
 
         return accel_seems_static and gyro_seems_static
@@ -276,37 +272,30 @@ class Filter:
         ).flatten()
 
         # fmt: off
-        print(f"\n{np.array2string(h, precision=3)} <- prediction of accelerometer measurement")
-        print(f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement\n")
+        # print(f"\norientation quaternion: {np.array2string(self.x[self.q_slice], precision=3)}")
+        print(f"{np.array2string(h, precision=3)} <- my prediction of accelerometer measurement")
+        print(f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement")
         # fmt: on
 
-        # Eigentlich könnte ich das was h macht ja hier händisch rechnen
-
-        h_test = (
-            R(self.x[self.q_slice]).T @ [0, 0, gravity_constant]
-            + self.x[self.a_b_slice]
-        )
-        print(np.array2string(h_test, precision=3))
-
-        try:
-            K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
-        except np.linalg.LinAlgError:
-            print(f"x.shape: {self.x.shape}")
-            print(f"P.shape: {self.P.shape}")
-            print(f"H.shape: {H.shape}")
-            print(f"W.shape: {self.W.shape}")
-            S = H @ self.P @ H.T + self.W
-            print("Determinant of P:", np.linalg.det(self.P))
-            print("Determinant of S:", np.linalg.det(S))
-            print(f"P matrix: {self.P}")
+        K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
         delta_x = K @ (a_tilde - h)
+
         # lesbarer print von delta_x
-        [
-            print(
-                f"{comp['name']}:\n{np.array2string(delta_x[comp['slice']], precision=3)}"
-            )
-            for comp in get_def("IMU error state")["components"]
-        ]
+        # print("delta x = K * (h(x) - g^h):")
+        # [
+        #     print(
+        #         f"{comp['name']}:\n{np.array2string(delta_x[comp['slice']], precision=3)}"
+        #     )
+        #     for comp in get_def("IMU error state")["components"]
+        # ]
+
         self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
-        self.P = (np.eye(15) - K @ H) @ np.linalg.inv(self.P)
+
+        # standard form
+        # self.P = (np.eye(15) - K @ H) @ self.P
+
+        # joseph form
+        I_KH = np.eye(15) - K @ H
+        self.P = I_KH @ self.P @ I_KH.T + K @ self.W @ K.T
+        self.P = (self.P + self.P.T) / 2
