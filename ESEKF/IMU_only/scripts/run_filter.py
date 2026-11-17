@@ -7,7 +7,7 @@ The bridge between
 - plotting tools
 
 This file should not contain any of the actual mathmatical operations being performed by the filter,
-it's only the middleman
+it's only the connection between processes
 """
 
 import numpy as np
@@ -27,16 +27,19 @@ from modules.filter_class import Filter
 from scripts.plot_filter_results import *
 
 
-recordings_folder = "../../csv_files_of_neon_recordings/"
+rawIMU_recs_path = "../../csv_files_of_neon_recordings/"
 
-state_history_output = "../out/IMU_input_and_states_over_time.csv"
+filter_output_filename = "IMU_input_and_states_over_time.csv"
+filter_output_path = "../out/"
+finished_filter_output_path = filter_output_path + filter_output_filename
 
 
 def main():
     # fetch recording files names, ask user which one to run and prune unused data columns
     try:
-        input_files = gather_IMU_files()
-        input_file_path = prompt_file_selection(input_files)
+        list_of_rawIMU_csv_filenames = gather_IMU_files()
+        input_file_path = prompt_file_selection(list_of_rawIMU_csv_filenames)
+        print(input_file_path)
         all_imu_data = read_csv(input_file_path)
         imu_data = clean_csv(all_imu_data)
     except (FileNotFoundError, ValueError):
@@ -44,38 +47,44 @@ def main():
 
     # run filter
     esekf = Filter()
-    print(f"\ndeterminant of covariance P at the start: {np.linalg.det(esekf.P)}")
+    # print(f"\ndeterminant of covariance P at the start: {np.linalg.det(esekf.P)}")
     for index, row in imu_data.iterrows():
         esekf.process_IMU_sample(row, index)
 
-    print(f"\ndeterminant of covariance P at the end: {np.linalg.det(esekf.P)}")
+    # print(f"\ndeterminant of covariance P at the end: {np.linalg.det(esekf.P)}")
 
     # plot results
     plot_data(
         esekf.input_and_state_history,
-        input_file_path.replace(recordings_folder, ""),
-        state_history_output,
+        # "../recordings/IMU.csv" -> "IMU.csv"
+        input_file_path.replace(rawIMU_recs_path, ""),
+        finished_filter_output_path,
     )
 
 
 def gather_IMU_files():
     try:
-        input_files = [f for f in os.listdir(recordings_folder) if f.endswith(".csv")]
+        list_of_rawIMU_csv_filenames = [
+            f for f in os.listdir(rawIMU_recs_path) if f.endswith(".csv")
+        ]
     except FileNotFoundError:
-        print(f"Error: The directory '{recordings_folder}' does not exist.")
+        print(f"Error: The directory '{rawIMU_recs_path}' does not exist.")
         raise FileNotFoundError
 
-    if not input_files:
-        print(f"The directory '{recordings_folder}' exists but contains no CSV files.")
+    if not list_of_rawIMU_csv_filenames:
+        print(f"The directory '{rawIMU_recs_path}' exists but contains no CSV files.")
         raise FileNotFoundError
 
-    return input_files
+    return list_of_rawIMU_csv_filenames
 
 
-def prompt_file_selection(input_files):
+def prompt_file_selection(list_of_rawIMU_csv_filenames):
     # User is prompted in terminal to select out of the available recordings
     print("\nThe following IMU data files are available:\n")
-    [print(f" {index} - {file}") for index, file in enumerate(input_files)]
+    [
+        print(f" {index} - {file}")
+        for index, file in enumerate(list_of_rawIMU_csv_filenames)
+    ]
     print(f" q - abort script")
     selected_index_input = input("\nPlease select the input file by typing its index: ")
 
@@ -87,18 +96,18 @@ def prompt_file_selection(input_files):
 
     try:
         selected_id = int(selected_index_input)
-        if 0 <= selected_id < len(input_files):
-            file_name = input_files[selected_id]
+        if 0 <= selected_id < len(list_of_rawIMU_csv_filenames):
+            file_name = list_of_rawIMU_csv_filenames[selected_id]
             print(f"reading file:")
     except ValueError:
         pass
 
     if not file_name:
         print(f"Invalid selection! Defaulting to index 0, reading file:")
-        file_name = input_files[0]
+        file_name = list_of_rawIMU_csv_filenames[0]
 
     print(f'\n > "{file_name}"\n\n ============')
-    return os.path.join(recordings_folder, file_name)
+    return os.path.join(rawIMU_recs_path, file_name)
 
 
 def read_csv(file):
@@ -111,14 +120,14 @@ def read_csv(file):
 
 def clean_csv(all_imu_data):
     unused_cols_of_recordings = [
-        "roll [deg]",
-        "pitch [deg]",
-        "yaw [deg]",
-        "quaternion x",
-        "quaternion y",
-        "quaternion z",
-        "quaternion w",
         "recording id",
+        # "roll [deg]",
+        # "pitch [deg]",
+        # "yaw [deg]",
+        # "quaternion x",
+        # "quaternion y",
+        # "quaternion z",
+        # "quaternion w",
     ]
 
     return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
@@ -149,8 +158,9 @@ def plot_data(history_array, input_file_path, output):
     )
     df.to_csv(output, index=False)
 
-    pyplot_input_grid(output, input_file_path)
-    pyplot_input_and_state_grid(output, input_file_path)
+    # pyplot_input_grid(output, input_file_path)
+    # pyplot_input_and_state_grid(output, input_file_path)
+    # pyplot_orientation_grid(output, input_file_path)
 
 
 if __name__ == "__main__":

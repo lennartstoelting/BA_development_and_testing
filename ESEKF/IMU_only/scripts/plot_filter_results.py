@@ -116,3 +116,50 @@ def pyplot_input_grid(output_file_name, input_file_name):
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
+
+
+def pyplot_orientation_grid(output_file_name, input_file_name):
+    q_sym = get_def("IMU orientation")["dims"]
+
+    df = pd.read_csv(output_file_name)
+    time = df["time"].values
+
+    quats_df = df[q_sym].copy()
+
+    # Pre-calculate Euler angles
+    rotations = Rotation.from_quat(quats_df.values, scalar_first=True)
+    euler = rotations.as_euler("yxz", degrees=True)
+
+    df["roll"], df["pitch"], df["yaw"] = euler[:, 0], euler[:, 1], euler[:, 2]
+
+    fig, axs = plt.subplots(2, 1, figsize=(16, 16))
+    fig.suptitle(input_file_name)
+
+    plots = [
+        {"name": "IMU accelerometer", "col": 0},
+    ]
+
+    for plot in plots:
+        for index, curve in enumerate(["red", "green", "blue"]):
+            latex_string = get_def(plot["name"])["dims"][index]
+            axs[plot["col"]].plot(
+                time, df[latex_string], label="$" + latex_string + "$", color=curve
+            )
+        axs[plot["col"]].set_ylabel(plot["name"])
+
+    # orientation special case
+    axs[1].plot(time, df["roll"], label="Roll")
+    axs[1].plot(time, df["pitch"], label="Pitch")
+    # axs[1].plot(time, df["yaw"], label="Yaw")
+    axs[1].set_ylabel("Orientation (deg)")
+
+    # time labels at the bottom
+    axs[1].set_xlabel("time (s)")
+
+    for ax in axs.flat:
+        if ax.has_data():
+            ax.legend(loc="best", fontsize="small")
+            ax.grid(True)
+
+    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()

@@ -80,29 +80,27 @@ class Filter:
             self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
 
             if self._IMU_seems_static(accel_in_m_ss, gyro_in_rad_s):
-
-                print(
-                    f"\n=== IMU seems static, triggering correction step at sample {sample_index}"
-                )
-                print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
-                print(f"det of P before correction step {np.linalg.det(self.P)}")
+                # print(
+                #     f"\n=== IMU seems static, triggering correction step at sample {sample_index}"
+                # )
+                # print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
+                # print(f"det of P before correction step {np.linalg.det(self.P)}")
                 # with np.printoptions(precision=3, suppress=True):
                 #     print("P before:\n", np.array2string(self.P, precision=3))
                 self._correction_step(accel_in_m_ss)
-                print(f"det of P after correction step {np.linalg.det(self.P)}\n")
+                # print(f"det of P after correction step {np.linalg.det(self.P)}\n")
                 # with np.printoptions(precision=3, suppress=True):
                 #     print("P after:\n", np.array2string(self.P, precision=3))
+                pass
 
-        accel_norm = np.absolute(
-            np.linalg.norm(accel_in_m_ss - self.x[self.a_b_slice]) - gravity_constant
-        )
-        gyro_norm = np.linalg.norm(gyro_in_rad_s - self.x[self.omega_b_slice])
+        accel_norm = np.absolute(np.linalg.norm(accel_in_m_ss) - gravity_constant)
+        gyro_norm = np.linalg.norm(gyro_in_rad_s)
 
         # very high values don't interest us, only the lower values are useful to determine when to cut off
         accel_norm = accel_norm if accel_norm < 1.5 else 1.5
         accel_norm = accel_norm if accel_norm < 1 else 1
 
-        accel_threshold = 0.2
+        accel_threshold = 0.3
         gyro_threshold = 0.1
 
         # append to history for plotting
@@ -253,14 +251,12 @@ class Filter:
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
         which lets us assume the IMU measures no additional acceleration or angle velocity
         """
-        static_accel_threshold = 0.2
-        accel_absolute = np.absolute(
-            np.linalg.norm(accel_in_m_ss - self.x[self.a_b_slice]) - gravity_constant
-        )
+        static_accel_threshold = 0.3
+        accel_absolute = np.absolute(np.linalg.norm(accel_in_m_ss) - gravity_constant)
         accel_seems_static = accel_absolute < static_accel_threshold
 
         static_gyro_threshold = 0.1
-        gyro_absolute = np.linalg.norm(gyro_in_rad_s - self.x[self.omega_b_slice])
+        gyro_absolute = np.linalg.norm(gyro_in_rad_s)
         gyro_seems_static = gyro_absolute < static_gyro_threshold
 
         return accel_seems_static and gyro_seems_static
@@ -273,8 +269,8 @@ class Filter:
 
         # fmt: off
         # print(f"\norientation quaternion: {np.array2string(self.x[self.q_slice], precision=3)}")
-        print(f"{np.array2string(h, precision=3)} <- my prediction of accelerometer measurement")
-        print(f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement")
+        # print(f"{np.array2string(h, precision=3)} <- my prediction of accelerometer measurement")
+        # print(f"{np.array2string(a_tilde, precision = 3)} <- accelerometer measurement")
         # fmt: on
 
         K = self.P @ H.T @ np.linalg.inv(H @ self.P @ H.T + self.W)
