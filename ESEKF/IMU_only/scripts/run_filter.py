@@ -19,9 +19,9 @@ from plot_filter_results import pyplot_orientation_grid
 
 UNUSED_RECORDING_COLUMNS = [
     "recording id",
-    # "roll [deg]",
-    # "pitch [deg]",
-    # "yaw [deg]",
+    "roll [deg]",
+    "pitch [deg]",
+    "yaw [deg]",
     # "quaternion x",
     # "quaternion y",
     # "quaternion z",
@@ -45,11 +45,8 @@ def main():
         esekf.process_IMU_sample(row, index)
 
     # plot results
-    save_and_plot_history(
-        esekf.input_and_state_history,
-        selected_IMU_file.name,
-        FILTER_OUTPUT_FILE,
-    )
+    save_filter_history(esekf.input_and_state_history)
+    plot_filter_history(selected_IMU_file.name)
 
 
 def find_recording_files() -> list:
@@ -96,7 +93,7 @@ def drop_unused_columns(all_imu_data):
     return all_imu_data.drop(UNUSED_RECORDING_COLUMNS, axis=1, errors="ignore")
 
 
-def save_and_plot_history(history_array, input_file_name, output_file):
+def save_filter_history(history_array):
     if not history_array:
         print("Combined history of inputs and states is empty, can't be plotted")
         return
@@ -119,12 +116,14 @@ def save_and_plot_history(history_array, input_file_name, output_file):
             "time",
         ],
     )
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(output_file, index=False)
+    FILTER_OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(FILTER_OUTPUT_FILE, index=False)
 
-    # pyplot_input_grid(output_file, input_file_name)
-    # pyplot_input_and_state_grid(output_file, input_file_name)
-    pyplot_orientation_grid(output_file, input_file_name)
+
+def plot_filter_history(input_file_name):
+    # pyplot_input_grid(FILTER_OUTPUT_FILE, input_file_name)
+    # pyplot_input_and_state_grid(FILTER_OUTPUT_FILE, input_file_name)
+    pyplot_orientation_grid(FILTER_OUTPUT_FILE, input_file_name)
 
 
 if __name__ == "__main__":

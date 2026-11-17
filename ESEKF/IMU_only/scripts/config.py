@@ -5,7 +5,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent  # IMU_only/
 
 RAW_IMU_RECS_DIR = PROJECT_ROOT.parent / "csv_files_of_neon_recordings"
 OUTPUT_DIR = PROJECT_ROOT / "out"
-FILTER_OUTPUT_FILE = OUTPUT_DIR / "IMU_input_and_states_over_time.csv"
+FILTER_OUTPUT_FILE = OUTPUT_DIR / "plottable_filter_output.csv"
 
 FILTER_FUNCS_FILE = OUTPUT_DIR / "filter_funcs_IMU_only.pkl"
 
