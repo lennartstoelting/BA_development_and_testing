@@ -15,7 +15,9 @@ import pandas as pd
 from config import RAW_IMU_RECS_DIR, FILTER_OUTPUT_FILE  # must come first
 from modules import *
 from modules.filter_class import Filter
-from plot_filter_results import pyplot_orientation_grid
+from modules.plot_filter_results import *
+
+# from plot_filter_results import pyplot_orientation_grid
 
 UNUSED_RECORDING_COLUMNS = [
     "recording id",
@@ -108,10 +110,8 @@ def save_filter_history(history_array):
             *get_def("IMU gyro bias")["dims"],
             *get_def("IMU accelerometer")["dims"],
             *get_def("IMU gyroscope")["dims"],
-            "accel_norm",
-            "accel_threshold",
-            "gyro_norm",
-            "gyro_threshold",
+            *["accel_norm", "accel_threshold"],
+            *["gyro_norm", "gyro_threshold"],
             "covariance_temp",
             "time",
         ],
@@ -120,10 +120,29 @@ def save_filter_history(history_array):
     df.to_csv(FILTER_OUTPUT_FILE, index=False)
 
 
-def plot_filter_history(input_file_name):
-    # pyplot_input_grid(FILTER_OUTPUT_FILE, input_file_name)
-    # pyplot_input_and_state_grid(FILTER_OUTPUT_FILE, input_file_name)
-    pyplot_orientation_grid(FILTER_OUTPUT_FILE, input_file_name)
+def plot_filter_history(title):
+    plots = {
+        "input and states with covariance": [
+            ["IMU accelerometer", "IMU gyroscope"],
+            ["IMU velocity", orientation_panel()],
+            ["IMU position", covariance_panel],
+            ["IMU accel bias", "IMU gyro bias"],
+        ],
+        "correction trigger accel and gyro norm": [
+            ["IMU accelerometer", "IMU gyroscope"],
+            [
+                norm_panel("accel_norm", "accel_threshold"),
+                norm_panel("gyro_norm", "gyro_threshold"),
+            ],
+        ],
+        "orientation closeup": [
+            ["IMU accelerometer"],
+            [orientation_panel(angles=("roll", "pitch"))],
+        ],
+    }
+
+    for name, layout in plots.items():
+        plot_grid(layout, f"file: {title}\n{name}")
 
 
 if __name__ == "__main__":
