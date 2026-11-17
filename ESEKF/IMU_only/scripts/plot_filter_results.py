@@ -1,16 +1,6 @@
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from scipy.spatial.transform import Rotation
-import os
-import sys
-
-# go to parent directory
-project_root = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from modules import *
 

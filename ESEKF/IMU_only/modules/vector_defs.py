@@ -1,7 +1,5 @@
 import sympy as sym
 import numpy as np
-import os
-import sys
 
 # ==================
 # constants

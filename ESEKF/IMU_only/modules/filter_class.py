@@ -1,20 +1,10 @@
-import numpy as np
-import pandas as pd
 import dill
-import os
-import sys
+import numpy as np
 
-# go to parent directory
-project_root = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
+from config import FILTER_FUNCS_FILE
 from modules import *
 
-
-with open(os.path.join(project_root, "out", "filter_funcs_IMU_only.pkl"), "rb") as f:
+with open(FILTER_FUNCS_FILE, "rb") as f:
     esekf_funcs = dill.load(f)
 
 

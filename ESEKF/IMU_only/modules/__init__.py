@@ -1,2 +1,2 @@
 from .vector_defs import *
-from .helper_funcs import *
+from .math_helper_funcs import *

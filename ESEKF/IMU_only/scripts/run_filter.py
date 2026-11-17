@@ -6,134 +6,97 @@ The bridge between
 - implemented theory
 - plotting tools
 
-This file should not contain any of the actual mathmatical operations being performed by the filter,
+This file should not contain any of the actual mathematical operations being performed by the filter,
 it's only the connection between processes
 """
 
-import numpy as np
 import pandas as pd
-import os
-import sys
 
-# go to parent directory
-project_root = os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-)
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
+from config import RAW_IMU_RECS_DIR, FILTER_OUTPUT_FILE  # must come first
 from modules import *
 from modules.filter_class import Filter
-from scripts.plot_filter_results import *
+from plot_filter_results import pyplot_orientation_grid
 
-
-rawIMU_recs_path = "../../csv_files_of_neon_recordings/"
-
-filter_output_filename = "IMU_input_and_states_over_time.csv"
-filter_output_path = "../out/"
-finished_filter_output_path = filter_output_path + filter_output_filename
+UNUSED_RECORDING_COLUMNS = [
+    "recording id",
+    # "roll [deg]",
+    # "pitch [deg]",
+    # "yaw [deg]",
+    # "quaternion x",
+    # "quaternion y",
+    # "quaternion z",
+    # "quaternion w",
+]
 
 
 def main():
-    # fetch recording files names, ask user which one to run and prune unused data columns
+    # find recordings, ask user which one to run and prune unused data columns
     try:
-        list_of_rawIMU_csv_filenames = gather_IMU_files()
-        input_file_path = prompt_file_selection(list_of_rawIMU_csv_filenames)
-        print(input_file_path)
-        all_imu_data = read_csv(input_file_path)
-        imu_data = clean_csv(all_imu_data)
-    except (FileNotFoundError, ValueError):
+        recording_files = find_recording_files()
+        selected_IMU_file = prompt_file_selection(recording_files)
+        imu_data = drop_unused_columns(load_recording(selected_IMU_file))
+    except (FileNotFoundError, ValueError) as error:
+        print(error)
         return
 
     # run filter
     esekf = Filter()
-    # print(f"\ndeterminant of covariance P at the start: {np.linalg.det(esekf.P)}")
     for index, row in imu_data.iterrows():
         esekf.process_IMU_sample(row, index)
 
-    # print(f"\ndeterminant of covariance P at the end: {np.linalg.det(esekf.P)}")
-
     # plot results
-    plot_data(
+    save_and_plot_history(
         esekf.input_and_state_history,
-        # "../recordings/IMU.csv" -> "IMU.csv"
-        input_file_path.replace(rawIMU_recs_path, ""),
-        finished_filter_output_path,
+        selected_IMU_file.name,
+        FILTER_OUTPUT_FILE,
     )
 
 
-def gather_IMU_files():
-    try:
-        list_of_rawIMU_csv_filenames = [
-            f for f in os.listdir(rawIMU_recs_path) if f.endswith(".csv")
-        ]
-    except FileNotFoundError:
-        print(f"Error: The directory '{rawIMU_recs_path}' does not exist.")
-        raise FileNotFoundError
+def find_recording_files() -> list:
+    if not RAW_IMU_RECS_DIR.is_dir():
+        raise FileNotFoundError(f"The directory '{RAW_IMU_RECS_DIR}' does not exist.")
 
-    if not list_of_rawIMU_csv_filenames:
-        print(f"The directory '{rawIMU_recs_path}' exists but contains no CSV files.")
-        raise FileNotFoundError
-
-    return list_of_rawIMU_csv_filenames
+    recording_files = sorted(RAW_IMU_RECS_DIR.glob("*.csv"))
+    if not recording_files:
+        raise FileNotFoundError(
+            f"The directory '{RAW_IMU_RECS_DIR}' exists but contains no CSV files."
+        )
+    return recording_files
 
 
-def prompt_file_selection(list_of_rawIMU_csv_filenames):
-    # User is prompted in terminal to select out of the available recordings
+def prompt_file_selection(recording_files):
     print("\nThe following IMU data files are available:\n")
-    [
-        print(f" {index} - {file}")
-        for index, file in enumerate(list_of_rawIMU_csv_filenames)
-    ]
-    print(f" q - abort script")
-    selected_index_input = input("\nPlease select the input file by typing its index: ")
+    for index, file in enumerate(recording_files):
+        print(f" {index} - {file.name}")
+    print(" q - abort script")
+    answer = input("\nPlease select the input file by typing its index: ")
 
-    file_name = None
-
-    if selected_index_input == "q":
-        print("\naborted script execution\n")
-        raise ValueError
+    if answer == "q":
+        raise ValueError("\naborted script execution\n")
 
     try:
-        selected_id = int(selected_index_input)
-        if 0 <= selected_id < len(list_of_rawIMU_csv_filenames):
-            file_name = list_of_rawIMU_csv_filenames[selected_id]
-            print(f"reading file:")
-    except ValueError:
-        pass
+        selected_file = recording_files[int(answer)]
+        print("reading file:")
+    except (ValueError, IndexError):
+        selected_file = recording_files[0]
+        print("Invalid selection! Defaulting to index 0, reading file:")
 
-    if not file_name:
-        print(f"Invalid selection! Defaulting to index 0, reading file:")
-        file_name = list_of_rawIMU_csv_filenames[0]
-
-    print(f'\n > "{file_name}"\n\n ============')
-    return os.path.join(rawIMU_recs_path, file_name)
+    print(f'\n > "{selected_file.name}"\n\n ============')
+    return selected_file
 
 
-def read_csv(file):
+def load_recording(file):
     try:
         return pd.read_csv(file, engine="python")
     except FileNotFoundError:
-        print(f"Error: Reading '{file}' as CSV failed.")
-        raise FileNotFoundError
+        raise FileNotFoundError(f"Reading '{file}' as CSV failed.")
 
 
-def clean_csv(all_imu_data):
-    unused_cols_of_recordings = [
-        "recording id",
-        # "roll [deg]",
-        # "pitch [deg]",
-        # "yaw [deg]",
-        # "quaternion x",
-        # "quaternion y",
-        # "quaternion z",
-        # "quaternion w",
-    ]
-
-    return all_imu_data.drop(unused_cols_of_recordings, axis=1, errors="ignore")
+def drop_unused_columns(all_imu_data):
+    return all_imu_data.drop(UNUSED_RECORDING_COLUMNS, axis=1, errors="ignore")
 
 
-def plot_data(history_array, input_file_path, output):
+def save_and_plot_history(history_array, input_file_name, output_file):
     if not history_array:
         print("Combined history of inputs and states is empty, can't be plotted")
         return
@@ -156,11 +119,12 @@ def plot_data(history_array, input_file_path, output):
             "time",
         ],
     )
-    df.to_csv(output, index=False)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_file, index=False)
 
-    # pyplot_input_grid(output, input_file_path)
-    # pyplot_input_and_state_grid(output, input_file_path)
-    # pyplot_orientation_grid(output, input_file_path)
+    # pyplot_input_grid(output_file, input_file_name)
+    # pyplot_input_and_state_grid(output_file, input_file_name)
+    pyplot_orientation_grid(output_file, input_file_name)
 
 
 if __name__ == "__main__":
