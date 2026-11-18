@@ -7,6 +7,9 @@ from modules import *
 with open(FILTER_FUNCS_FILE, "rb") as f:
     esekf_funcs = dill.load(f)
 
+ACCEL_STATIC_THRESHOLD = 0.3
+GYRO_STATIC_THRESHOLD = 0.1
+
 
 class Filter:
     def __init__(self):
@@ -41,11 +44,17 @@ class Filter:
         self.gyro_calibration_buffer = []
 
         self.state_history = []
-        self.input_and_state_history = []
+        self.filter_history = []
 
     def process_IMU_sample(self, data_row, sample_index):
         # prepare all inputs
         timestamp = data_row["timestamp [ns]"] / 1e9
+
+        neon_orientation_estimate = [
+            data_row["roll [deg]"],
+            data_row["pitch [deg]"],
+            data_row["yaw [deg]"],
+        ]
 
         # fmt: off
         accel_in_g = np.array([data_row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
@@ -55,9 +64,12 @@ class Filter:
         gyro_in_rad_s = np.deg2rad(gyro_in_deg_s)
         # fmt: on
 
+        imu_static, accel_norm, gyro_norm = self._IMU_seems_static(
+            accel_in_m_ss, gyro_in_rad_s
+        )
+
         if not self.start_time:
-            """only for very first sample"""
-            self.start_time = timestamp
+            self.start_time = timestamp  # only for very first sample
 
         self.current_time = timestamp
         self.elapsed_time = self.current_time - self.start_time
@@ -69,43 +81,23 @@ class Filter:
 
             self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
 
-            if self._IMU_seems_static(accel_in_m_ss, gyro_in_rad_s):
-                # print(
-                #     f"\n=== IMU seems static, triggering correction step at sample {sample_index}"
-                # )
-                # print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
-                # print(f"det of P before correction step {np.linalg.det(self.P)}")
-                # with np.printoptions(precision=3, suppress=True):
-                #     print("P before:\n", np.array2string(self.P, precision=3))
-                # self._correction_step(accel_in_m_ss)
-                # print(f"det of P after correction step {np.linalg.det(self.P)}\n")
-                # with np.printoptions(precision=3, suppress=True):
-                #     print("P after:\n", np.array2string(self.P, precision=3))
-                pass
-
-        accel_norm = np.absolute(np.linalg.norm(accel_in_m_ss) - gravity_constant)
-        gyro_norm = np.linalg.norm(gyro_in_rad_s)
-
-        # very high values don't interest us, only the lower values are useful to determine when to cut off
-        accel_norm = accel_norm if accel_norm < 1.5 else 1.5
-        accel_norm = accel_norm if accel_norm < 1 else 1
-
-        accel_threshold = 0.3
-        gyro_threshold = 0.1
+            if imu_static:
+                # print(f"\ntriggering correction step at sample {sample_index}")
+                self._correction_step(accel_in_m_ss)
 
         # append to history for plotting
-        self.input_and_state_history.append(
+        self.filter_history.append(
             np.hstack(
                 [
-                    self.x.copy(),
-                    accel_in_m_ss,
-                    gyro_in_rad_s,
-                    accel_norm,
-                    accel_threshold,
-                    gyro_norm,
-                    gyro_threshold,
-                    np.linalg.slogdet(self.P)[1],
+                    # fmt: off
+                    self.x.copy(),  # state
+                    *[accel_in_m_ss, gyro_in_rad_s],  # raw IMU sensor measurements (units converted)
+                    *[accel_norm, ACCEL_STATIC_THRESHOLD],  # accel static check
+                    *[gyro_norm, GYRO_STATIC_THRESHOLD],  # gyro static check
+                    np.linalg.slogdet(self.P)[1],  # det P
+                    neon_orientation_estimate,  # neon glasses orientation estimate
                     self.elapsed_time,
+                    # fmt: on
                 ]
             )
         )
@@ -237,21 +229,30 @@ class Filter:
 
         self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
 
-    def _IMU_seems_static(self, accel_in_m_ss, gyro_in_rad_s) -> bool:
+    def _IMU_seems_static(self, accel_in_m_ss, gyro_in_rad_s):
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
         which lets us assume the IMU measures no additional acceleration or angle velocity
         """
-        static_accel_threshold = 0.3
         accel_absolute = np.absolute(np.linalg.norm(accel_in_m_ss) - gravity_constant)
-        accel_seems_static = accel_absolute < static_accel_threshold
+        accel_seems_static = accel_absolute < ACCEL_STATIC_THRESHOLD
 
-        static_gyro_threshold = 0.1
         gyro_absolute = np.linalg.norm(gyro_in_rad_s)
-        gyro_seems_static = gyro_absolute < static_gyro_threshold
+        gyro_seems_static = gyro_absolute < GYRO_STATIC_THRESHOLD
 
-        return accel_seems_static and gyro_seems_static
+        imu_seems_static = accel_seems_static and gyro_seems_static
+        # if imu_seems_static:
+        #     print(f"IMU seems static with these values:")
+        #     print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
+
+        return (
+            imu_seems_static,
+            accel_absolute,
+            gyro_absolute,
+        )
 
     def _correction_step(self, a_tilde):
+        # print(f"det of P before correction step {np.linalg.det(self.P)}")
+
         H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
         h = esekf_funcs["h"](
             *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
@@ -268,12 +269,10 @@ class Filter:
 
         # lesbarer print von delta_x
         # print("delta x = K * (h(x) - g^h):")
-        # [
+        # for comp in get_def("IMU error state")["components"]:
         #     print(
         #         f"{comp['name']}:\n{np.array2string(delta_x[comp['slice']], precision=3)}"
         #     )
-        #     for comp in get_def("IMU error state")["components"]
-        # ]
 
         self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
@@ -285,3 +284,5 @@ class Filter:
         I_KH = np.eye(15) - K @ H
         self.P = I_KH @ self.P @ I_KH.T + K @ self.W @ K.T
         self.P = (self.P + self.P.T) / 2
+
+        # print(f"det of P after correction step {np.linalg.det(self.P)}\n")

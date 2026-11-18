@@ -17,10 +17,16 @@ from modules import *
 from modules.filter_class import Filter
 from modules.plot_filter_results import *
 
-# from plot_filter_results import pyplot_orientation_grid
 
-UNUSED_RECORDING_COLUMNS = [
-    "recording id",
+COLUMNS_TO_KEEP_FROM_RAW_DATA = [
+    # "recording id",
+    "timestamp [ns]",
+    "acceleration x [g]",
+    "acceleration y [g]",
+    "acceleration z [g]",
+    "gyro x [deg/s]",
+    "gyro y [deg/s]",
+    "gyro z [deg/s]",
     "roll [deg]",
     "pitch [deg]",
     "yaw [deg]",
@@ -36,18 +42,23 @@ def main():
     try:
         recording_files = find_recording_files()
         selected_IMU_file = prompt_file_selection(recording_files)
-        imu_data = drop_unused_columns(load_recording(selected_IMU_file))
+        all_imu_data = load_recording(selected_IMU_file)
+        imu_data = all_imu_data[COLUMNS_TO_KEEP_FROM_RAW_DATA]
     except (FileNotFoundError, ValueError) as error:
         print(error)
         return
 
-    # run filter
+    timer = Timer()
     esekf = Filter()
+
+    print("running filter...")
     for index, row in imu_data.iterrows():
         esekf.process_IMU_sample(row, index)
+    print(f"filter finished {timer.check()}")
+    del timer
 
     # plot results
-    save_filter_history(esekf.input_and_state_history)
+    save_filter_history(esekf.filter_history)
     plot_filter_history(selected_IMU_file.name)
 
 
@@ -80,7 +91,7 @@ def prompt_file_selection(recording_files):
         selected_file = recording_files[0]
         print("Invalid selection! Defaulting to index 0, reading file:")
 
-    print(f'\n > "{selected_file.name}"\n\n ============')
+    print(f'\n > "{selected_file.name}"\n\n ============\n')
     return selected_file
 
 
@@ -91,11 +102,11 @@ def load_recording(file):
         raise FileNotFoundError(f"Reading '{file}' as CSV failed.")
 
 
-def drop_unused_columns(all_imu_data):
-    return all_imu_data.drop(UNUSED_RECORDING_COLUMNS, axis=1, errors="ignore")
-
-
 def save_filter_history(history_array):
+
+    print("\n ============\n")
+    print(" saving filter results to csv...")
+
     if not history_array:
         print("Combined history of inputs and states is empty, can't be plotted")
         return
@@ -103,16 +114,20 @@ def save_filter_history(history_array):
     df = pd.DataFrame(
         history_array,
         columns=[
-            *get_def("IMU position")["dims"],
-            *get_def("IMU velocity")["dims"],
-            *get_def("IMU orientation")["dims"],
-            *get_def("IMU accel bias")["dims"],
-            *get_def("IMU gyro bias")["dims"],
-            *get_def("IMU accelerometer")["dims"],
-            *get_def("IMU gyroscope")["dims"],
-            *["accel_norm", "accel_threshold"],
-            *["gyro_norm", "gyro_threshold"],
-            "covariance_test",
+            *[
+                dim
+                for comp in get_def("IMU nominal state")["components"]
+                for dim in get_def(comp["name"])["dims"]
+            ],  # state
+            *[
+                dim
+                for comp in get_def("IMU input")["components"]
+                for dim in get_def(comp["name"])["dims"]
+            ],  # raw IMU sensor measurements (units converted)
+            *["accel_norm", "accel_threshold"],  # accel static check
+            *["gyro_norm", "gyro_threshold"],  # gyro static check
+            "covariance_test",  # det P
+            *["neon_roll", "neon_pitch", "neon_yaw"],
             "time",
         ],
     )
@@ -121,6 +136,10 @@ def save_filter_history(history_array):
 
 
 def plot_filter_history(title):
+
+    print("\n ============\n")
+    print(" plotting filter results from csv (press q in plot window to exit)...")
+
     plots = {
         # fmt: off
         "input and states with covariance": [
@@ -144,8 +163,8 @@ def plot_filter_history(title):
             ],
         ],
         "orientation closeup": [
-            ["IMU accelerometer"],
             [orientation_panel(angles=("roll", "pitch", "yaw"))],
+            [orientation_panel(angles=("neon_roll", "neon_pitch", "neon_yaw"))],
         ],
     }
 
@@ -153,7 +172,7 @@ def plot_filter_history(title):
         if name in (
             "input and states with covariance",
             "correction trigger accel and gyro norm",
-            # "orientation closeup",
+            "orientation closeup",
         ):
             plot_grid(layout, f"file: {title}\n{name}")
 
