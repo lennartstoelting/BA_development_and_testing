@@ -112,7 +112,7 @@ def save_filter_history(history_array):
             *get_def("IMU gyroscope")["dims"],
             *["accel_norm", "accel_threshold"],
             *["gyro_norm", "gyro_threshold"],
-            "covariance_temp",
+            "covariance_test",
             "time",
         ],
     )
@@ -122,27 +122,40 @@ def save_filter_history(history_array):
 
 def plot_filter_history(title):
     plots = {
+        # fmt: off
         "input and states with covariance": [
             ["IMU accelerometer", "IMU gyroscope"],
             ["IMU velocity", orientation_panel()],
-            ["IMU position", covariance_panel],
+            ["IMU position", panel(("covariance_test", "det P"), ylabel="log scale"),],
             ["IMU accel bias", "IMU gyro bias"],
         ],
+        # fmt: on
         "correction trigger accel and gyro norm": [
             ["IMU accelerometer", "IMU gyroscope"],
             [
-                norm_panel("accel_norm", "accel_threshold"),
-                norm_panel("gyro_norm", "gyro_threshold"),
+                panel(
+                    ("accel_threshold", "accel_threshold"),
+                    ("accel_norm", r"$|(\|a\| - g)|$"),
+                ),
+                panel(
+                    ("gyro_threshold", "gyro_threshold"),
+                    ("gyro_norm", r"$\|\omega\|$"),
+                ),
             ],
         ],
         "orientation closeup": [
             ["IMU accelerometer"],
-            [orientation_panel(angles=("roll", "pitch"))],
+            [orientation_panel(angles=("roll", "pitch", "yaw"))],
         ],
     }
 
     for name, layout in plots.items():
-        plot_grid(layout, f"file: {title}\n{name}")
+        if name in (
+            "input and states with covariance",
+            "correction trigger accel and gyro norm",
+            # "orientation closeup",
+        ):
+            plot_grid(layout, f"file: {title}\n{name}")
 
 
 if __name__ == "__main__":

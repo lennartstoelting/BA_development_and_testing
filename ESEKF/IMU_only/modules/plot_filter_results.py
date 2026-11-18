@@ -42,7 +42,7 @@ def _load_history(history_file):
 # ---------------------------------------------------------------------------
 
 
-def vector_panel(name):
+def def_vector_panel(name):
     """x/y/z components of a quantity known to get_def, e.g. "IMU velocity"."""
 
     def draw(ax, df):
@@ -64,19 +64,21 @@ def orientation_panel(angles=("roll", "pitch", "yaw")):
     return draw
 
 
-def norm_panel(norm_column, threshold_column):
-    """A norm signal together with its threshold."""
+def panel(*series, ylabel=None):
+    """
+    Plot one or more history columns against time.
+
+    Each entry in `series` is a (column, label) tuple.
+    """
 
     def draw(ax, df):
-        ax.plot(df["time"], df[norm_column], label=f"|{norm_column}|", color="yellow")
-        ax.plot(df["time"], df[threshold_column], label=threshold_column, color="black")
+        for i, item in enumerate(series):
+            column, label = item
+            ax.plot(df["time"], df[column], label=label, color=COMPONENT_COLORS[i])
+        if ylabel:
+            ax.set_ylabel(ylabel)
 
     return draw
-
-
-def covariance_panel(ax, df):
-    ax.plot(df["time"], df["covariance_temp"], label="det P")
-    ax.set_ylabel("log scale")
 
 
 # ---------------------------------------------------------------------------
@@ -95,16 +97,16 @@ def plot_grid(layout, title, figsize=(16, 16)):
     for row_id, panels in enumerate(layout):
         for col_id in range(n_cols):
             ax = axs[row_id, col_id]
-            panel = panels[col_id] if col_id < len(panels) else None
+            panel_func = panels[col_id] if col_id < len(panels) else None
 
-            if panel is None:
+            if panel_func is None:
                 ax.axis("off")
                 continue
 
-            if isinstance(panel, str):
-                panel = vector_panel(panel)
+            if isinstance(panel_func, str):
+                panel_func = def_vector_panel(panel_func)
 
-            panel(ax, df)
+            panel_func(ax, df)
 
             if row_id == n_rows - 1:
                 ax.set_xlabel("time (s)")
@@ -112,5 +114,6 @@ def plot_grid(layout, title, figsize=(16, 16)):
                 ax.legend(loc="best", fontsize="small")
                 ax.grid(True)
 
-    fig.tight_layout(rect=[0, 0.03, 1, 0.95])
+    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.canvas.manager.full_screen_toggle()
     plt.show()

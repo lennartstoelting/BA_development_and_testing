@@ -77,7 +77,7 @@ class Filter:
                 # print(f"det of P before correction step {np.linalg.det(self.P)}")
                 # with np.printoptions(precision=3, suppress=True):
                 #     print("P before:\n", np.array2string(self.P, precision=3))
-                self._correction_step(accel_in_m_ss)
+                # self._correction_step(accel_in_m_ss)
                 # print(f"det of P after correction step {np.linalg.det(self.P)}\n")
                 # with np.printoptions(precision=3, suppress=True):
                 #     print("P after:\n", np.array2string(self.P, precision=3))
