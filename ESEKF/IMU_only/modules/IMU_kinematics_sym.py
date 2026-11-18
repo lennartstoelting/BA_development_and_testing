@@ -2,9 +2,9 @@ import sympy as sym
 
 from modules import *
 
-# ===
+# ---------------------------------------------------------------------------
 # fixed values
-# ===
+# ---------------------------------------------------------------------------
 
 dt = sym.Symbol(r"\Delta t", real=True, positive=True)
 
@@ -20,9 +20,9 @@ omega_tilde = get_sympy_vec("omega_tilde")
 
 u_tilde = sym.Matrix.vstack(a_tilde, omega_tilde)
 
-# ===
+# ---------------------------------------------------------------------------
 # nominal state
-# ===
+# ---------------------------------------------------------------------------
 
 # state
 
@@ -54,9 +54,9 @@ f_omega_b = omega_b
 
 f_x_IMU = sym.Matrix.vstack(f_p, f_v, f_q, f_a_b, f_omega_b)
 
-# ===
+# ---------------------------------------------------------------------------
 # error state
-# ===
+# ---------------------------------------------------------------------------
 
 delta_p = get_sympy_vec("delta_p")
 delta_v = get_sympy_vec("delta_v")
@@ -122,9 +122,9 @@ f_delta_x_IMU = sym.Matrix.vstack(
     f_delta_p, f_delta_v, f_delta_theta, f_delta_a_b, f_delta_omega_b
 )
 
-# ===
+# ---------------------------------------------------------------------------
 # true state
-# ===
+# ---------------------------------------------------------------------------
 
 p_true = p + delta_p
 v_true = v + delta_v
@@ -134,9 +134,9 @@ omega_b_true = omega_b + delta_omega_b
 
 x_IMU_true = sym.Matrix.vstack(p_true, v_true, q_true, a_b_true, omega_b_true)
 
-# ===
+# ---------------------------------------------------------------------------
 # measurements
-# ===
+# ---------------------------------------------------------------------------
 
 g_h = R(q).T * -gravity_vector_sym + a_b
 

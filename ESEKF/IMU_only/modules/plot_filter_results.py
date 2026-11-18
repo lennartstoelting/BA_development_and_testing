@@ -6,7 +6,7 @@ Structure:
 - a *layout* is a list of rows, each row a list of panels (None = leave empty)
 - `plot_grid(layout, ...)` builds the figure from a layout
 
-New grid:        write a new layout and pass it to plot_grid
+New grid:         write a new layout and pass it to plot_grid
 New kind of plot: write a new panel function (or panel factory)
 """
 

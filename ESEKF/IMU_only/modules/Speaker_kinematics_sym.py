@@ -3,9 +3,9 @@ import sympy as sym
 from modules import *
 from modules.IMU_kinematics_sym import *
 
-# ===
+# ---------------------------------------------------------------------------
 # fixed values
-# ===
+# ---------------------------------------------------------------------------
 
 # \Delta p_{I \to c}
 IMU_cam_x_translation = 0
@@ -25,9 +25,9 @@ IMU_cam_rotation = sym.Matrix(
     [IMU_cam_w_rotation, IMU_cam_x_rotation, IMU_cam_y_rotation, IMU_cam_z_rotation]
 )
 
-# ===
+# ---------------------------------------------------------------------------
 # nominal state
-# ===
+# ---------------------------------------------------------------------------
 
 p_s = get_sympy_vec("p_s")
 v_s = get_sympy_vec("v_s")
@@ -51,9 +51,9 @@ f_q_s = q_s
 
 f_x_s = sym.Matrix.vstack(f_p_s, f_v_s, f_q_s)
 
-# ===
+# ---------------------------------------------------------------------------
 # error state
-# ===
+# ---------------------------------------------------------------------------
 
 delta_p_s = get_sympy_vec("delta_p_s")
 delta_v_s = get_sympy_vec("delta_v_s")
@@ -85,9 +85,9 @@ f_delta_theta_s = delta_theta_s + delta_theta_s_n
 
 f_delta_x_s = sym.Matrix.vstack(f_delta_p_s, f_delta_v_s, f_delta_theta_s)
 
-# ===
+# ---------------------------------------------------------------------------
 # true state
-# ===
+# ---------------------------------------------------------------------------
 
 p_s_true = p_s + delta_p_s
 v_s_true = v_s + delta_v_s
@@ -95,9 +95,9 @@ q_s_true = left_quat_matrix(q_s) * quat_from_axis_angle(delta_theta_s)
 
 x_s_true = sym.Matrix.vstack(p_s_true, v_s_true, q_s_true)
 
-# ===
+# ---------------------------------------------------------------------------
 # measurements
-# ===
+# ---------------------------------------------------------------------------
 
 q_h_s = R(IMU_cam_rotation) * (R(q) * (p_s - p) - IMU_cam_translation)
 p_h_s = left_quat_matrix(quat_inv(left_quat_matrix(q) * IMU_cam_rotation)) * q_s

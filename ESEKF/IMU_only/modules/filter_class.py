@@ -12,149 +12,46 @@ GYRO_STATIC_THRESHOLD = 0.1
 
 
 class Filter:
+    # ---------------------------------------------------------------------------
+    # instance initialization
+    # ---------------------------------------------------------------------------
+
     def __init__(self):
+
+        self.x = None
+
+        # self.p_slice = get_def("IMU position")["slice"]  # unused
+        # self.v_slice = get_def("IMU velocity")["slice"]  # unused
+        self.q_slice = get_def("IMU orientation")["slice"]
+        self.a_b_slice = get_def("IMU accel bias")["slice"]
+        self.omega_b_slice = get_def("IMU gyro bias")["slice"]
+
+        self.P = None
+        self.Q = None
+        self.J = None
+        self.W = None
+        self._initialize_matrices()  # temporary
 
         self.start_time = None
         self.previous_time = None
         self.current_time = None
         self.elapsed_time = None
 
-        self.x = None
-        self.P = None
-        self.Q = None
-        self.J = None
-        self.W = None
+        self.calibration_complete = False
+        self.accel_calibration_buffer = []
+        self.gyro_calibration_buffer = []
 
-        self.p_slice = get_def("IMU position")["slice"]
-        self.v_slice = get_def("IMU velocity")["slice"]
-        self.q_slice = get_def("IMU orientation")["slice"]
-        self.a_b_slice = get_def("IMU accel bias")["slice"]
-        self.omega_b_slice = get_def("IMU gyro bias")["slice"]
+        self.filter_history = []
 
-        # Since I will not have it always be the case that there is zero speakers and the only measurement is gravity,
-        # I need to construct the matrices individually but also ideally automatically
+    # ---------------------------------------------------------------------------
+    # matrices initialization (implementation temporary)
+    # ---------------------------------------------------------------------------
+
+    def _initialize_matrices(self):
         self._initialize_error_state_covariance_matrix_P()
         self._initialize_process_noise_covariance_matrix_Q()
         self._initialize_process_noise_jacobian_matrix_J()
         self._initialize_measurement_noise_covariance_matrix_W()
-
-        self.calibration_complete = False
-
-        self.accel_calibration_buffer = []
-        self.gyro_calibration_buffer = []
-
-        self.state_history = []
-        self.filter_history = []
-
-    def process_IMU_sample(self, data_row, sample_index):
-        # prepare all inputs
-        timestamp = data_row["timestamp [ns]"] / 1e9
-
-        neon_orientation_estimate = [
-            data_row["roll [deg]"],
-            data_row["pitch [deg]"],
-            data_row["yaw [deg]"],
-        ]
-
-        # fmt: off
-        accel_in_g = np.array([data_row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
-        accel_in_m_ss = g2ms2(accel_in_g)
-
-        gyro_in_deg_s = np.array([data_row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
-        gyro_in_rad_s = np.deg2rad(gyro_in_deg_s)
-        # fmt: on
-
-        imu_static, accel_norm, gyro_norm = self._IMU_seems_static(
-            accel_in_m_ss, gyro_in_rad_s
-        )
-
-        if not self.start_time:
-            self.start_time = timestamp  # only for very first sample
-
-        self.current_time = timestamp
-        self.elapsed_time = self.current_time - self.start_time
-
-        if not self.calibration_complete:
-            self._calibration_step(accel_in_g, gyro_in_rad_s)
-        else:
-            dt = self.current_time - self.previous_time
-
-            self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
-
-            if imu_static:
-                # print(f"\ntriggering correction step at sample {sample_index}")
-                self._correction_step(accel_in_m_ss)
-
-        # append to history for plotting
-        self.filter_history.append(
-            np.hstack(
-                [
-                    # fmt: off
-                    self.x.copy(),  # state
-                    *[accel_in_m_ss, gyro_in_rad_s],  # raw IMU sensor measurements (units converted)
-                    *[accel_norm, ACCEL_STATIC_THRESHOLD],  # accel static check
-                    *[gyro_norm, GYRO_STATIC_THRESHOLD],  # gyro static check
-                    np.linalg.slogdet(self.P)[1],  # det P
-                    neon_orientation_estimate,  # neon glasses orientation estimate
-                    self.elapsed_time,
-                    # fmt: on
-                ]
-            )
-        )
-
-        self.previous_time = self.current_time
-
-    def _calibration_step(self, accel_in_g, gyro_in_rad_s):
-        self.accel_calibration_buffer.append(accel_in_g)
-        self.gyro_calibration_buffer.append(gyro_in_rad_s)
-
-        # placeholder array full of zeros except for where the quaternion need a one in the scalar
-        self.x = np.eye(get_def("IMU nominal state")["len"])[6]
-
-        if self.elapsed_time < calibration_dt:
-            # keep calibarting if we are not over the calibration time window
-            return
-
-        self._initialize_state_x()
-
-        self.calibration_complete = True
-        """
-        print(
-            f"\nCalibration ended after {self.elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
-        )
-        for i in self.x:
-            print(i)
-        """
-
-        self.accel_calibration_buffer = []
-        self.gyro_calibration_buffer = []
-
-    def _initialize_state_x(self):
-        accel_mean = np.mean(np.array(self.accel_calibration_buffer), axis=0)
-        accel_mean_normalized = normalize_vector(accel_mean)
-        gyro_mean = np.mean(np.array(self.gyro_calibration_buffer), axis=0)
-
-        # orientation
-        gravity_in_g = np.array([0.0, 0.0, 1.0])
-        qw_init = 1.0 + np.dot(accel_mean_normalized, gravity_in_g)
-        qx_init, qy_init, qz_init = np.cross(accel_mean_normalized, gravity_in_g)
-
-        q_init = normalize_vector([qw_init, qx_init, qy_init, qz_init])
-
-        # accel bias
-        # subtract what pure gravity should look like (1g) to be left with bias
-        accel_mean_without_gravity = accel_mean - accel_mean_normalized
-        # g to m/s^2 conversion
-        a_b_init = accel_mean_without_gravity * gravity_constant
-
-        # gyro bias
-        omega_b_init = gyro_mean
-
-        self.x = np.zeros(get_def("IMU nominal state")["len"])
-        # position and velocity start out at zero
-        self.x[self.q_slice] = q_init
-        self.x[self.a_b_slice] = a_b_init
-        self.x[self.omega_b_slice] = omega_b_init
 
     def _initialize_error_state_covariance_matrix_P(self):
         # for now, these values are trial and error
@@ -211,23 +108,66 @@ class Filter:
     def _initialize_process_noise_jacobian_matrix_J(self):
         self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
 
-    def _prediction_step(self, a_tilde, omega_tilde, dt):
-        self.x = esekf_funcs["f_x_IMU"](
-            *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
-        ).flatten()
-        self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
+    # ---------------------------------------------------------------------------
+    # processing one sample at a time
+    # ---------------------------------------------------------------------------
 
-        # hier ist die Frage ob ich das vorher mache oder nachher? Also
-        F_IMU = esekf_funcs["F_delta_x"](
-            *self.x[self.q_slice],
-            *self.x[self.a_b_slice],
-            *self.x[self.omega_b_slice],
-            *a_tilde,
-            *omega_tilde,
-            dt,
+    def process_IMU_sample(self, data_row, sample_index):
+        # prepare all inputs
+        timestamp = data_row["timestamp [ns]"] / 1e9
+
+        neon_orientation_estimate = [
+            data_row["roll [deg]"],
+            data_row["pitch [deg]"],
+            data_row["yaw [deg]"],
+        ]
+
+        # fmt: off
+        accel_in_g = np.array([data_row[f"acceleration {i} [g]"] for i in ["x", "y", "z"]])
+        accel_in_m_ss = g2ms2(accel_in_g)
+
+        gyro_in_deg_s = np.array([data_row[f"gyro {i} [deg/s]"] for i in ["x", "y", "z"]])
+        gyro_in_rad_s = np.deg2rad(gyro_in_deg_s)
+        # fmt: on
+
+        imu_static, accel_norm, gyro_norm = self._IMU_seems_static(
+            accel_in_m_ss, gyro_in_rad_s
         )
 
-        self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
+        if not self.start_time:
+            self.start_time = timestamp  # only for very first sample
+
+        self.current_time = timestamp
+        self.elapsed_time = self.current_time - self.start_time
+
+        if not self.calibration_complete:
+            self._calibration_step(accel_in_g, gyro_in_rad_s)
+        else:
+            dt = self.current_time - self.previous_time
+
+            self._prediction_step(accel_in_m_ss, gyro_in_rad_s, dt)
+
+            if imu_static:
+                # print(f"\ntriggering correction step at sample {sample_index}")
+                self._correction_step(accel_in_m_ss)
+
+        self.filter_history.append(
+            np.hstack(
+                [
+                    # fmt: off
+                    self.x.copy(),  # state
+                    *[accel_in_m_ss, gyro_in_rad_s],  # raw IMU sensor measurements (units converted)
+                    *[accel_norm, ACCEL_STATIC_THRESHOLD],  # accel static check
+                    *[gyro_norm, GYRO_STATIC_THRESHOLD],  # gyro static check
+                    np.linalg.slogdet(self.P)[1],  # det P
+                    neon_orientation_estimate,  # neon glasses orientation estimate
+                    self.elapsed_time,
+                    # fmt: on
+                ]
+            )
+        )
+
+        self.previous_time = self.current_time
 
     def _IMU_seems_static(self, accel_in_m_ss, gyro_in_rad_s):
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
@@ -249,6 +189,88 @@ class Filter:
             accel_absolute,
             gyro_absolute,
         )
+
+    # ---------------------------------------------------------------------------
+    # calibration
+    # ---------------------------------------------------------------------------
+
+    def _calibration_step(self, accel_in_g, gyro_in_rad_s):
+        self.accel_calibration_buffer.append(accel_in_g)
+        self.gyro_calibration_buffer.append(gyro_in_rad_s)
+
+        # placeholder array full of zeros except for where the quaternion need a one in the scalar
+        self.x = np.eye(get_def("IMU nominal state")["len"])[6]
+
+        if self.elapsed_time < calibration_dt:
+            # keep calibarting if we are not over the calibration time window
+            return
+
+        self._initialize_state_x()
+
+        self.calibration_complete = True
+        """
+        print(
+            f"\nCalibration ended after {self.elapsed_time:.6f} seconds | {len(self.accel_calibration_buffer)} samples used | Initial state after calibration:\n"
+        )
+        for i in self.x:
+            print(i)
+        """
+
+        self.accel_calibration_buffer = []
+        self.gyro_calibration_buffer = []
+
+    def _initialize_state_x(self):
+        accel_mean = np.mean(np.array(self.accel_calibration_buffer), axis=0)
+        accel_mean_normalized = normalize_vector(accel_mean)
+        gyro_mean = np.mean(np.array(self.gyro_calibration_buffer), axis=0)
+
+        # orientation
+        gravity_in_g = np.array([0.0, 0.0, 1.0])
+        qw_init = 1.0 + np.dot(accel_mean_normalized, gravity_in_g)
+        qx_init, qy_init, qz_init = np.cross(accel_mean_normalized, gravity_in_g)
+
+        q_init = normalize_vector([qw_init, qx_init, qy_init, qz_init])
+
+        # accel bias
+        # subtract what pure gravity should look like (1g) to be left with bias
+        accel_mean_without_gravity = accel_mean - accel_mean_normalized
+        # g to m/s^2 conversion
+        a_b_init = accel_mean_without_gravity * gravity_constant
+
+        # gyro bias
+        omega_b_init = gyro_mean
+
+        self.x = np.zeros(get_def("IMU nominal state")["len"])
+        # position and velocity start out at zero
+        self.x[self.q_slice] = q_init
+        self.x[self.a_b_slice] = a_b_init
+        self.x[self.omega_b_slice] = omega_b_init
+
+    # ---------------------------------------------------------------------------
+    # prediction
+    # ---------------------------------------------------------------------------
+
+    def _prediction_step(self, a_tilde, omega_tilde, dt):
+        self.x = esekf_funcs["f_x_IMU"](
+            *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
+        ).flatten()
+        self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
+
+        # hier ist die Frage ob ich das vorher mache oder nachher? Also
+        F_IMU = esekf_funcs["F_delta_x"](
+            *self.x[self.q_slice],
+            *self.x[self.a_b_slice],
+            *self.x[self.omega_b_slice],
+            *a_tilde,
+            *omega_tilde,
+            dt,
+        )
+
+        self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
+
+    # ---------------------------------------------------------------------------
+    # correction
+    # ---------------------------------------------------------------------------
 
     def _correction_step(self, a_tilde):
         # print(f"det of P before correction step {np.linalg.det(self.P)}")

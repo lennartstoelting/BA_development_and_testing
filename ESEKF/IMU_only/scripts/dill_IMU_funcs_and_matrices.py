@@ -9,7 +9,7 @@ from modules.IMU_kinematics_sym import *
 def assert_inputs_match(expr, input_symbols, name):
     input_set = set(input_symbols)
 
-    # in expr, but not lambdified -> would become a global
+    # in expr, but not lambdified (would become a global)
     missing = expr.free_symbols - input_set
     # lambdified, but not in expr -> suspicious
     unused = input_set - expr.free_symbols

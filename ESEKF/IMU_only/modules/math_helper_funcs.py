@@ -4,6 +4,10 @@ import time
 import os
 import sys
 
+# ---------------------------------------------------------------------------
+# math
+# ---------------------------------------------------------------------------
+
 
 def normalize_vector(vec):
     return vec / np.linalg.norm(vec)
@@ -90,9 +94,9 @@ def _match_output_to_input_type(var, output):
     return output
 
 
-# ==================
-# generally usefull helper methods
-# ==================
+# ---------------------------------------------------------------------------
+# general helper functions
+# ---------------------------------------------------------------------------
 
 
 class Timer:

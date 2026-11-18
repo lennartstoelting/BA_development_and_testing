@@ -62,6 +62,11 @@ def main():
     plot_filter_history(selected_IMU_file.name)
 
 
+# ---------------------------------------------------------------------------
+# finding, selecting and loading IMU recording file
+# ---------------------------------------------------------------------------
+
+
 def find_recording_files() -> list:
     if not RAW_IMU_RECS_DIR.is_dir():
         raise FileNotFoundError(f"The directory '{RAW_IMU_RECS_DIR}' does not exist.")
@@ -100,6 +105,11 @@ def load_recording(file):
         return pd.read_csv(file, engine="python")
     except FileNotFoundError:
         raise FileNotFoundError(f"Reading '{file}' as CSV failed.")
+
+
+# ---------------------------------------------------------------------------
+# saving and plotting finished filter
+# ---------------------------------------------------------------------------
 
 
 def save_filter_history(history_array):
