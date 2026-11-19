@@ -7,22 +7,21 @@ import numpy as np
 
 
 # physical constants
-gravity_constant = 9.80665
-g2ms2 = lambda g: g * gravity_constant
-gravity_vector = [0, 0, g2ms2(-1)]
+GRAVITY_CONSTANT = 9.80665
+g2ms2 = lambda g: g * GRAVITY_CONSTANT
+GRAVITY_VEC = [0, 0, g2ms2(-1)]
 
 # system constants
 # \Delta p_{I \to c}
-IMU_cam_translation_value = [0, -0.0013, -0.00662]
+IMU_CAM_TRANSLATION = [0, -0.0013, -0.00662]
 # \Delta q_{I \to c}
-Phi_in_rad = np.deg2rad(102)
-IMU_cam_rotation_value = [np.cos(-Phi_in_rad / 2), np.sin(-Phi_in_rad / 2), 0, 0]
+IMU_CAM_ROTATION = [np.cos(-np.deg2rad(102) / 2), np.sin(-np.deg2rad(102) / 2), 0, 0]
 
 # length of timewindow at the start for IMU calibration in seconds
-calibration_dt = 3
+CALIBRATION_DT = 3
 
 # estimate of running average over multiple recordings
-IMU_sample_freq = 103.5
+IMU_SAMPLE_FREQ = 103.5
 
 
 # ---------------------------------------------------------------------------
@@ -31,7 +30,7 @@ IMU_sample_freq = 103.5
 
 
 def _create_vector(name: str, var: str, tex: str, components: list):
-    """one time call to assemble the esekf_vectors into a list of dictionaries
+    """one time call to assemble the ESEKF_VECTORS into a list of dictionaries
 
     Args:
         name (str): Name of the vector
@@ -70,7 +69,7 @@ def _create_component(name: str, unit: str, var: str, tex: str, dims: int):
     }
 
 
-esekf_vectors = [
+ESEKF_VECTORS = [
     _create_vector(*v)
     for v in [
         [
@@ -223,7 +222,7 @@ def _add_components_slice():
     together with the start/stop index of the slice (range). \n
     Also adds the length of each vector, adding up all the (sub-)components lengths (dims)
     """
-    for vec in esekf_vectors:
+    for vec in ESEKF_VECTORS:
         current_index = 0
         for component in vec["components"]:
             dims = len(component["dims"])
@@ -240,7 +239,7 @@ _add_components_slice()
 # ---------------------------------------------------------------------------
 
 
-def get_def(target_value, target_key="name", node=esekf_vectors):
+def get_def(target_value, target_key="name", node=ESEKF_VECTORS):
     """
     Recursively search the schema definition tree for an element matching target_key == target_value
     """
@@ -266,7 +265,7 @@ def get_sympy_vec(target_value, target_key="var"):
 
 def main():
     """prints out assembled dictionary for debugging"""
-    for vec in esekf_vectors:
+    for vec in ESEKF_VECTORS:
         print(f"\n{vec["name"]}\n")
         for comp in vec["components"]:
             for index, (key, value) in enumerate(comp.items()):

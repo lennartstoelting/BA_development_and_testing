@@ -11,7 +11,7 @@ from modules.IMU_kinematics_sym import *
 IMU_cam_x_translation = 0
 IMU_cam_y_translation = sym.Symbol(r"\Delta{p}_y", negative=True)
 IMU_cam_z_translation = sym.Symbol(r"\Delta{p}_z", negative=True)
-IMU_cam_translation = sym.Matrix(
+IMU_cam_translation_sym = sym.Matrix(
     [IMU_cam_x_translation, IMU_cam_y_translation, IMU_cam_z_translation]
 )
 
@@ -99,5 +99,5 @@ x_s_true = sym.Matrix.vstack(p_s_true, v_s_true, q_s_true)
 # measurements
 # ---------------------------------------------------------------------------
 
-q_h_s = R(IMU_cam_rotation) * (R(q) * (p_s - p) - IMU_cam_translation)
+q_h_s = R(IMU_cam_rotation) * (R(q) * (p_s - p) - IMU_cam_translation_sym)
 p_h_s = left_quat_matrix(quat_inv(left_quat_matrix(q) * IMU_cam_rotation)) * q_s

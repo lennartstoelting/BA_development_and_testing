@@ -77,12 +77,12 @@ class Filter:
         gyroNSD = np.deg2rad(gyroNSD_deg)  # rad/s/√Hz
 
         # multiplied by bandwidth to get standard deviation
-        sigma_accel = accelNSD * np.sqrt(IMU_sample_freq)
-        sigma_gyro = gyroNSD * np.sqrt(IMU_sample_freq)
+        sigma_accel = accelNSD * np.sqrt(IMU_SAMPLE_FREQ)
+        sigma_gyro = gyroNSD * np.sqrt(IMU_SAMPLE_FREQ)
 
         # square sigma for variance and multiply by dt^2
-        variance_accel = (sigma_accel**2) * ((1 / IMU_sample_freq) ** 2)
-        variance_gyro = (sigma_gyro**2) * ((1 / IMU_sample_freq) ** 2)
+        variance_accel = (sigma_accel**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
+        variance_gyro = (sigma_gyro**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
 
         # vorher hatte ich 1e-5 überall, halt komplett ins blaue geschätzt
         process_noise = {
@@ -173,7 +173,7 @@ class Filter:
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
         which lets us assume the IMU measures no additional acceleration or angle velocity
         """
-        accel_absolute = np.absolute(np.linalg.norm(accel_in_m_ss) - gravity_constant)
+        accel_absolute = np.absolute(np.linalg.norm(accel_in_m_ss) - GRAVITY_CONSTANT)
         accel_seems_static = accel_absolute < ACCEL_STATIC_THRESHOLD
 
         gyro_absolute = np.linalg.norm(gyro_in_rad_s)
@@ -201,7 +201,7 @@ class Filter:
         # placeholder array full of zeros except for where the quaternion need a one in the scalar
         self.x = np.eye(get_def("IMU nominal state")["len"])[6]
 
-        if self.elapsed_time < calibration_dt:
+        if self.elapsed_time < CALIBRATION_DT:
             # keep calibarting if we are not over the calibration time window
             return
 
@@ -235,7 +235,7 @@ class Filter:
         # subtract what pure gravity should look like (1g) to be left with bias
         accel_mean_without_gravity = accel_mean - accel_mean_normalized
         # g to m/s^2 conversion
-        a_b_init = accel_mean_without_gravity * gravity_constant
+        a_b_init = accel_mean_without_gravity * GRAVITY_CONSTANT
 
         # gyro bias
         omega_b_init = gyro_mean
@@ -252,7 +252,7 @@ class Filter:
 
     def _prediction_step(self, a_tilde, omega_tilde, dt):
         self.x = esekf_funcs["f_x_IMU"](
-            *self.x, *a_tilde, *omega_tilde, gravity_constant, dt
+            *self.x, *a_tilde, *omega_tilde, GRAVITY_CONSTANT, dt
         ).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
 
@@ -275,9 +275,9 @@ class Filter:
     def _correction_step(self, a_tilde):
         # print(f"det of P before correction step {np.linalg.det(self.P)}")
 
-        H = esekf_funcs["H_delta_x"](*self.x[6:10], gravity_constant)
+        H = esekf_funcs["H_delta_x"](*self.x[6:10], GRAVITY_CONSTANT)
         h = esekf_funcs["h"](
-            *self.x[self.q_slice], *self.x[self.a_b_slice], gravity_constant
+            *self.x[self.q_slice], *self.x[self.a_b_slice], GRAVITY_CONSTANT
         ).flatten()
 
         # fmt: off
