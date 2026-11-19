@@ -114,6 +114,6 @@ def plot_grid(layout, title, figsize=(16, 16)):
                 ax.legend(loc="best", fontsize="small")
                 ax.grid(True)
 
-    fig.tight_layout(rect=[0, 0, 1, 0.97])
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
     fig.canvas.manager.full_screen_toggle()
     plt.show()

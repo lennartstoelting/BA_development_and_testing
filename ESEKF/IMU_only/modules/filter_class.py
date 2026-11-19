@@ -96,6 +96,9 @@ class Filter:
             np.repeat([sigma_sqrd for _, sigma_sqrd in process_noise.items()], 3)
         )
 
+    def _initialize_process_noise_jacobian_matrix_J(self):
+        self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
+
     def _initialize_measurement_noise_covariance_matrix_W(self):
         measurement_noise = {
             "accel_gravity": 2.5e-3,  # guess
@@ -105,14 +108,11 @@ class Filter:
             np.repeat([sigma_sqrd for _, sigma_sqrd in measurement_noise.items()], 3)
         )
 
-    def _initialize_process_noise_jacobian_matrix_J(self):
-        self.J = np.vstack((np.zeros((3, 12)), np.eye(12)))
-
     # ---------------------------------------------------------------------------
     # processing one sample at a time
     # ---------------------------------------------------------------------------
 
-    def process_imu_sample(self, data_row, sample_index):
+    def process_imu_sample(self, data_row, sample_index, calibration_dt=CALIBRATION_DT):
         # prepare all inputs
         timestamp = data_row["timestamp [ns]"] / 1e9
 
@@ -141,7 +141,7 @@ class Filter:
         self.elapsed_time = self.current_time - self.start_time
 
         if not self.calibration_complete:
-            self._calibration_step(accel_in_g, gyro_in_rad_s)
+            self._calibration_step(accel_in_g, gyro_in_rad_s, calibration_dt)
         else:
             dt = self.current_time - self.previous_time
 
@@ -194,14 +194,14 @@ class Filter:
     # calibration
     # ---------------------------------------------------------------------------
 
-    def _calibration_step(self, accel_in_g, gyro_in_rad_s):
+    def _calibration_step(self, accel_in_g, gyro_in_rad_s, calibration_dt):
         self.accel_calibration_buffer.append(accel_in_g)
         self.gyro_calibration_buffer.append(gyro_in_rad_s)
 
         # placeholder array full of zeros except for where the quaternion need a one in the scalar
         self.x = np.eye(get_def("imu nominal state")["len"])[6]
 
-        if self.elapsed_time < CALIBRATION_DT:
+        if self.elapsed_time < calibration_dt:
             # keep calibarting if we are not over the calibration time window
             return
 
