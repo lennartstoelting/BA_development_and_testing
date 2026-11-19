@@ -13,15 +13,15 @@ GRAVITY_VEC = [0, 0, g2ms2(-1)]
 
 # system constants
 # \Delta p_{I \to c}
-IMU_CAM_TRANSLATION = [0, -0.0013, -0.00662]
+imu_CAM_TRANSLATION = [0, -0.0013, -0.00662]
 # \Delta q_{I \to c}
-IMU_CAM_ROTATION = [np.cos(-np.deg2rad(102) / 2), np.sin(-np.deg2rad(102) / 2), 0, 0]
+imu_CAM_ROTATION = [np.cos(-np.deg2rad(102) / 2), np.sin(-np.deg2rad(102) / 2), 0, 0]
 
-# length of timewindow at the start for IMU calibration in seconds
+# length of timewindow at the start for imu calibration in seconds
 CALIBRATION_DT = 3
 
 # estimate of running average over multiple recordings
-IMU_SAMPLE_FREQ = 103.5
+imu_SAMPLE_FREQ = 103.5
 
 
 # ---------------------------------------------------------------------------
@@ -73,130 +73,130 @@ ESEKF_VECTORS = [
     _create_vector(*v)
     for v in [
         [
-            "IMU nominal state",
-            "x_IMU",
-            r"x_{IMU}",
+            "imu nominal state",
+            "x_imu",
+            r"x_{imu}",
             [
-                ["IMU position", "m", "p", r"p", 3],
-                ["IMU velocity", "m/s", "v", r"v", 3],
-                ["IMU orientation", "", "q", r"q", 4],
-                ["IMU accel bias", "m/s^2", "a_b", r"a_{b}", 3],
-                ["IMU gyro bias", "rad/s", "omega_b", r"\omega_{b}", 3],
+                ["imu position", "m", "p", r"p", 3],
+                ["imu velocity", "m/s", "v", r"v", 3],
+                ["imu orientation", "", "q", r"q", 4],
+                ["imu accel bias", "m/s^2", "a_b", r"a_{b}", 3],
+                ["imu gyro bias", "rad/s", "omega_b", r"\omega_{b}", 3],
             ],
         ],
         [
-            "Speaker nominal state",
+            "speaker nominal state",
             "x_s",
             r"x_{s}",
             [
-                ["Speaker position", "m", "p_s", r"p_{s}", 3],
-                ["Speaker velocity", "m/s", "v_s", r"v_{s}", 3],
-                ["Speaker orientation", "", "q_s", r"q_{s}", 4],
+                ["speaker position", "m", "p_s", r"p_{s}", 3],
+                ["speaker velocity", "m/s", "v_s", r"v_{s}", 3],
+                ["speaker orientation", "", "q_s", r"q_{s}", 4],
             ],
         ],
         [
-            "IMU error state",
-            "delta_x_IMU",
-            r"\delta{x}_{IMU}",
+            "imu error state",
+            "delta_x_imu",
+            r"\delta{x}_{imu}",
             [
                 # fmt: off
-                ["IMU position error", "m", "delta_p", r"\delta{p}", 3],
-                ["IMU velocity error", "m/s", "delta_v", r"\delta{v}", 3],
-                ["IMU orientation error", "rad", "delta_theta", r"\delta{\theta}", 3],
-                ["IMU accel bias error", "m/s^2", "delta_a_b", r"\delta{a}_{b}", 3],
-                ["IMU gyro bias error", "rad/s", "delta_omega_b", r"\delta{\omega}_{b}", 3],
+                ["imu position error", "m", "delta_p", r"\delta{p}", 3],
+                ["imu velocity error", "m/s", "delta_v", r"\delta{v}", 3],
+                ["imu orientation error", "rad", "delta_theta", r"\delta{\theta}", 3],
+                ["imu accel bias error", "m/s^2", "delta_a_b", r"\delta{a}_{b}", 3],
+                ["imu gyro bias error", "rad/s", "delta_omega_b", r"\delta{\omega}_{b}", 3],
                 # fmt: on
             ],
         ],
         [
-            "Speaker error state",
+            "speaker error state",
             "delta_x_s",
             r"\delta{x}_{s}",
             [
                 # fmt: off
-                ["Speaker position error", "m", "delta_p_s", r"\delta{p}_{s}", 3],
-                ["Speaker velocity error", "m/s", "delta_v_s", r"\delta{v}_{s}", 3],
-                ["Speaker orientation error", "rad", "delta_theta_s", r"\delta{\theta}_{s}", 3],
+                ["speaker position error", "m", "delta_p_s", r"\delta{p}_{s}", 3],
+                ["speaker velocity error", "m/s", "delta_v_s", r"\delta{v}_{s}", 3],
+                ["speaker orientation error", "rad", "delta_theta_s", r"\delta{\theta}_{s}", 3],
                 # fmt: on
             ],
         ],
         [
-            "IMU true state",
-            "x_hat_IMU",
-            r"\hat{x}_{IMU}",
+            "imu true state",
+            "x_hat_imu",
+            r"\hat{x}_{imu}",
             [
-                ["IMU position true", "m", "p_hat", r"\hat{p}", 3],
-                ["IMU velocity true", "m/s", "v_hat", r"\hat{v}", 3],
-                ["IMU orientation true", "", "q_hat", r"\hat{q}", 4],
-                ["IMU accel bias true", "m/s^2", "a_hat_b", r"\hat{a}_{b}", 3],
-                ["IMU gyro bias true", "rad/s", "omega_hat_b", r"\hat{\omega}_{b}", 3],
+                ["imu position true", "m", "p_hat", r"\hat{p}", 3],
+                ["imu velocity true", "m/s", "v_hat", r"\hat{v}", 3],
+                ["imu orientation true", "", "q_hat", r"\hat{q}", 4],
+                ["imu accel bias true", "m/s^2", "a_hat_b", r"\hat{a}_{b}", 3],
+                ["imu gyro bias true", "rad/s", "omega_hat_b", r"\hat{\omega}_{b}", 3],
             ],
         ],
         [
-            "Speaker true state",
+            "speaker true state",
             "x_hat_s",
             r"\hat{x}_{s}",
             [
-                ["Speaker position true", "m", "p_hat_s", r"\hat{p}_{s}", 3],
-                ["Speaker velocity true", "m/s", "v_hat_s", r"\hat{v}_{s}", 3],
-                ["Speaker orientation true", "", "q_hat_s", r"\hat{q}_{s}", 4],
+                ["speaker position true", "m", "p_hat_s", r"\hat{p}_{s}", 3],
+                ["speaker velocity true", "m/s", "v_hat_s", r"\hat{v}_{s}", 3],
+                ["speaker orientation true", "", "q_hat_s", r"\hat{q}_{s}", 4],
             ],
         ],
         [
-            "IMU input noise & perturbations (continuous time)",
+            "imu input noise & perturbations (continuous time)",
             "u_tilde_n",
             r"\tilde{u}_{n}",
             [
                 # fmt: off
-                ["IMU accelerometer noise", "m/s^2", "a_tilde_n", r"\tilde{a}_{n}", 3],
-                ["IMU gyroscope noise", "rad/s", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
-                ["IMU accel bias perturbations", "m/s^3", "a_b_tilde_n", r"\tilde{a}_{bn}", 3],
-                ["IMU gyro bias perturbations", "rad/s^2", "omega_b_tilde_n", r"\tilde{\omega}_{bn}", 3],
+                ["imu accelerometer noise", "m/s^2", "a_tilde_n", r"\tilde{a}_{n}", 3],
+                ["imu gyroscope noise", "rad/s", "omega_tilde_n", r"\tilde{\omega}_{n}", 3],
+                ["imu accel bias perturbations", "m/s^3", "a_b_tilde_n", r"\tilde{a}_{bn}", 3],
+                ["imu gyro bias perturbations", "rad/s^2", "omega_b_tilde_n", r"\tilde{\omega}_{bn}", 3],
                 # fmt: on
             ],
         ],
         [
-            "IMU process noise (discrete time)",
-            "delta_x_n_IMU",
+            "imu process noise (discrete time)",
+            "delta_x_n_imu",
             r"\delta{x}_{IMUn}",
             [
                 # fmt: off
-                ["IMU velocity error noise", "m/s", "delta_v_n", r"\delta{v}_{n}", 3],
-                ["IMU orientation error noise", "rad", "delta_theta_n", r"\delta{\theta}_{n}", 3],
-                ["IMU accel bias error noise", "m/s^2", "delta_a_b_n", r"\delta{a}_{bn}", 3],
-                ["IMU gyro bias error noise", "rad/s", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
+                ["imu velocity error noise", "m/s", "delta_v_n", r"\delta{v}_{n}", 3],
+                ["imu orientation error noise", "rad", "delta_theta_n", r"\delta{\theta}_{n}", 3],
+                ["imu accel bias error noise", "m/s^2", "delta_a_b_n", r"\delta{a}_{bn}", 3],
+                ["imu gyro bias error noise", "rad/s", "delta_omega_b_n", r"\delta{\omega}_{bn}", 3],
                 # fmt: on
             ],
         ],
         [
-            "Speaker perturbations (continuous time)",
+            "speaker perturbations (continuous time)",
             "delta_x_s_per",
             r"\delta{x}_{s\text{per}}",
             [
                 # fmt: off
-                ["Speaker velocity error perturbations", "m/s^2", "delta_a_s_per", r"\delta{a}_{s\text{per}}", 3],
-                ["Speaker orientation error perturbations", "rad/s", "delta_omega_s_per", r"\delta{\omega}_{s\text{per}}", 3],
+                ["speaker velocity error perturbations", "m/s^2", "delta_a_s_per", r"\delta{a}_{s\text{per}}", 3],
+                ["speaker orientation error perturbations", "rad/s", "delta_omega_s_per", r"\delta{\omega}_{s\text{per}}", 3],
                 # fmt: on
             ],
         ],
         [
-            "Speaker process noise (discrete time)",
+            "speaker process noise (discrete time)",
             "delta_x_s_n",
             r"\delta{x}_{sn}",
             [
                 # fmt: off
-                ["Speaker velocity error noise", "m/s", "delta_v_s_n", r"\delta{v}_{sn}", 3],
-                ["Speaker orientation error noise", "rad", "delta_theta_s_n", r"\delta{\theta}_{sn}", 3],
+                ["speaker velocity error noise", "m/s", "delta_v_s_n", r"\delta{v}_{sn}", 3],
+                ["speaker orientation error noise", "rad", "delta_theta_s_n", r"\delta{\theta}_{sn}", 3],
                 # fmt: on
             ],
         ],
         [
-            "IMU input",
+            "imu input",
             "u_tilde",
             r"\tilde{u}",
             [
-                ["IMU accelerometer", "m/s^2", "a_tilde", r"\tilde{a}", 3],
-                ["IMU gyroscope", "rad/s", "omega_tilde", r"\tilde{\omega}", 3],
+                ["imu accelerometer", "m/s^2", "a_tilde", r"\tilde{a}", 3],
+                ["imu gyroscope", "rad/s", "omega_tilde", r"\tilde{\omega}", 3],
             ],
         ],
         [
@@ -208,7 +208,7 @@ ESEKF_VECTORS = [
                 ["predicted gravity measurement", "m/s^2", "a_g_h", r"a^{h}_{g}", 3],
                 ["predicted speaker position relative to camera", "m", "p_s_h", r"p^{h}_{s}", 3],
                 ["predicted speaker orientation relative to camera", "", "q_s_h", r"q^{h}_{s}", 4],
-                ["predicted IMU yaw", "rad", "psi_h", r"\psi^{h}", 1],
+                ["predicted imu yaw", "rad", "psi_h", r"\psi^{h}", 1],
                 # fmt: on
             ],
         ],

@@ -1,28 +1,28 @@
 import sympy as sym
 
 from modules import *
-from modules.IMU_kinematics_sym import *
+from modules.imu_kinematics_sym import *
 
 # ---------------------------------------------------------------------------
 # fixed values
 # ---------------------------------------------------------------------------
 
 # \Delta p_{I \to c}
-IMU_cam_x_translation = 0
-IMU_cam_y_translation = sym.Symbol(r"\Delta{p}_y", negative=True)
-IMU_cam_z_translation = sym.Symbol(r"\Delta{p}_z", negative=True)
-IMU_cam_translation_sym = sym.Matrix(
-    [IMU_cam_x_translation, IMU_cam_y_translation, IMU_cam_z_translation]
+imu_cam_x_translation = 0
+imu_cam_y_translation = sym.Symbol(r"\Delta{p}_y", negative=True)
+imu_cam_z_translation = sym.Symbol(r"\Delta{p}_z", negative=True)
+imu_cam_translation_sym = sym.Matrix(
+    [imu_cam_x_translation, imu_cam_y_translation, imu_cam_z_translation]
 )
 
 
 # \Delta q_{I \to c}
-IMU_cam_w_rotation = sym.Symbol(r"\Delta{q}_w", real=True)
-IMU_cam_x_rotation = sym.Symbol(r"\Delta{q}_x", real=True)
-IMU_cam_y_rotation = 0
-IMU_cam_z_rotation = 0
-IMU_cam_rotation = sym.Matrix(
-    [IMU_cam_w_rotation, IMU_cam_x_rotation, IMU_cam_y_rotation, IMU_cam_z_rotation]
+imu_cam_w_rotation = sym.Symbol(r"\Delta{q}_w", real=True)
+imu_cam_x_rotation = sym.Symbol(r"\Delta{q}_x", real=True)
+imu_cam_y_rotation = 0
+imu_cam_z_rotation = 0
+imu_cam_rotation = sym.Matrix(
+    [imu_cam_w_rotation, imu_cam_x_rotation, imu_cam_y_rotation, imu_cam_z_rotation]
 )
 
 # ---------------------------------------------------------------------------
@@ -99,5 +99,5 @@ x_s_true = sym.Matrix.vstack(p_s_true, v_s_true, q_s_true)
 # measurements
 # ---------------------------------------------------------------------------
 
-q_h_s = R(IMU_cam_rotation) * (R(q) * (p_s - p) - IMU_cam_translation_sym)
-p_h_s = left_quat_matrix(quat_inv(left_quat_matrix(q) * IMU_cam_rotation)) * q_s
+q_h_s = R(imu_cam_rotation) * (R(q) * (p_s - p) - imu_cam_translation_sym)
+p_h_s = left_quat_matrix(quat_inv(left_quat_matrix(q) * imu_cam_rotation)) * q_s

@@ -20,11 +20,11 @@ class Filter:
 
         self.x = None
 
-        # self.p_slice = get_def("IMU position")["slice"]  # unused
-        # self.v_slice = get_def("IMU velocity")["slice"]  # unused
-        self.q_slice = get_def("IMU orientation")["slice"]
-        self.a_b_slice = get_def("IMU accel bias")["slice"]
-        self.omega_b_slice = get_def("IMU gyro bias")["slice"]
+        # self.p_slice = get_def("imu position")["slice"]  # unused
+        # self.v_slice = get_def("imu velocity")["slice"]  # unused
+        self.q_slice = get_def("imu orientation")["slice"]
+        self.a_b_slice = get_def("imu accel bias")["slice"]
+        self.omega_b_slice = get_def("imu gyro bias")["slice"]
 
         self.P = None
         self.Q = None
@@ -77,12 +77,12 @@ class Filter:
         gyroNSD = np.deg2rad(gyroNSD_deg)  # rad/s/√Hz
 
         # multiplied by bandwidth to get standard deviation
-        sigma_accel = accelNSD * np.sqrt(IMU_SAMPLE_FREQ)
-        sigma_gyro = gyroNSD * np.sqrt(IMU_SAMPLE_FREQ)
+        sigma_accel = accelNSD * np.sqrt(imu_SAMPLE_FREQ)
+        sigma_gyro = gyroNSD * np.sqrt(imu_SAMPLE_FREQ)
 
         # square sigma for variance and multiply by dt^2
-        variance_accel = (sigma_accel**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
-        variance_gyro = (sigma_gyro**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
+        variance_accel = (sigma_accel**2) * ((1 / imu_SAMPLE_FREQ) ** 2)
+        variance_gyro = (sigma_gyro**2) * ((1 / imu_SAMPLE_FREQ) ** 2)
 
         # vorher hatte ich 1e-5 überall, halt komplett ins blaue geschätzt
         process_noise = {
@@ -112,7 +112,7 @@ class Filter:
     # processing one sample at a time
     # ---------------------------------------------------------------------------
 
-    def process_IMU_sample(self, data_row, sample_index):
+    def process_imu_sample(self, data_row, sample_index):
         # prepare all inputs
         timestamp = data_row["timestamp [ns]"] / 1e9
 
@@ -130,7 +130,7 @@ class Filter:
         gyro_in_rad_s = np.deg2rad(gyro_in_deg_s)
         # fmt: on
 
-        imu_static, accel_norm, gyro_norm = self._IMU_seems_static(
+        imu_static, accel_norm, gyro_norm = self._imu_seems_static(
             accel_in_m_ss, gyro_in_rad_s
         )
 
@@ -156,7 +156,7 @@ class Filter:
                 [
                     # fmt: off
                     self.x.copy(),  # state
-                    *[accel_in_m_ss, gyro_in_rad_s],  # raw IMU sensor measurements (units converted)
+                    *[accel_in_m_ss, gyro_in_rad_s],  # raw imu sensor measurements (units converted)
                     *[accel_norm, ACCEL_STATIC_THRESHOLD],  # accel static check
                     *[gyro_norm, GYRO_STATIC_THRESHOLD],  # gyro static check
                     np.linalg.slogdet(self.P)[1],  # det P
@@ -169,9 +169,9 @@ class Filter:
 
         self.previous_time = self.current_time
 
-    def _IMU_seems_static(self, accel_in_m_ss, gyro_in_rad_s):
+    def _imu_seems_static(self, accel_in_m_ss, gyro_in_rad_s):
         """using the data from accelerometer and gyro, are the values in range of a certain threshold
-        which lets us assume the IMU measures no additional acceleration or angle velocity
+        which lets us assume the imu measures no additional acceleration or angle velocity
         """
         accel_absolute = np.absolute(np.linalg.norm(accel_in_m_ss) - GRAVITY_CONSTANT)
         accel_seems_static = accel_absolute < ACCEL_STATIC_THRESHOLD
@@ -181,7 +181,7 @@ class Filter:
 
         imu_seems_static = accel_seems_static and gyro_seems_static
         # if imu_seems_static:
-        #     print(f"IMU seems static with these values:")
+        #     print(f"imu seems static with these values:")
         #     print(f"accel (m/s^2): {accel_in_m_ss}; gyro (rad/s): {gyro_in_rad_s}")
 
         return (
@@ -199,7 +199,7 @@ class Filter:
         self.gyro_calibration_buffer.append(gyro_in_rad_s)
 
         # placeholder array full of zeros except for where the quaternion need a one in the scalar
-        self.x = np.eye(get_def("IMU nominal state")["len"])[6]
+        self.x = np.eye(get_def("imu nominal state")["len"])[6]
 
         if self.elapsed_time < CALIBRATION_DT:
             # keep calibarting if we are not over the calibration time window
@@ -240,7 +240,7 @@ class Filter:
         # gyro bias
         omega_b_init = gyro_mean
 
-        self.x = np.zeros(get_def("IMU nominal state")["len"])
+        self.x = np.zeros(get_def("imu nominal state")["len"])
         # position and velocity start out at zero
         self.x[self.q_slice] = q_init
         self.x[self.a_b_slice] = a_b_init
@@ -251,13 +251,13 @@ class Filter:
     # ---------------------------------------------------------------------------
 
     def _prediction_step(self, a_tilde, omega_tilde, dt):
-        self.x = esekf_funcs["f_x_IMU"](
+        self.x = esekf_funcs["f_x_imu"](
             *self.x, *a_tilde, *omega_tilde, GRAVITY_CONSTANT, dt
         ).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
 
         # hier ist die Frage ob ich das vorher mache oder nachher? Also
-        F_IMU = esekf_funcs["F_delta_x"](
+        F_imu = esekf_funcs["F_delta_x"](
             *self.x[self.q_slice],
             *self.x[self.a_b_slice],
             *self.x[self.omega_b_slice],
@@ -266,7 +266,7 @@ class Filter:
             dt,
         )
 
-        self.P = F_IMU @ self.P @ F_IMU.T + self.J @ self.Q @ self.J.T
+        self.P = F_imu @ self.P @ F_imu.T + self.J @ self.Q @ self.J.T
 
     # ---------------------------------------------------------------------------
     # correction
@@ -291,12 +291,12 @@ class Filter:
 
         # lesbarer print von delta_x
         # print("delta x = K * (h(x) - g^h):")
-        # for comp in get_def("IMU error state")["components"]:
+        # for comp in get_def("imu error state")["components"]:
         #     print(
         #         f"{comp['name']}:\n{np.array2string(delta_x[comp['slice']], precision=3)}"
         #     )
 
-        self.x = esekf_funcs["x_IMU_true"](*self.x, *delta_x).flatten()
+        self.x = esekf_funcs["x_imu_true"](*self.x, *delta_x).flatten()
         self.x[self.q_slice] = normalize_vector(self.x[self.q_slice])
 
         # standard form

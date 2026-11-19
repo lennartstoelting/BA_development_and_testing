@@ -3,7 +3,7 @@ import sympy as sym
 
 from config import FILTER_FUNCS_FILE  # must come before the modules imports
 from modules import *
-from modules.IMU_kinematics_sym import *
+from modules.imu_kinematics_sym import *
 
 
 def assert_inputs_match(expr, input_symbols, name):
@@ -30,14 +30,14 @@ def build_filter_funcs():
     # ---
     # I need to set the order of inputs that will later be used when calling the function.
     # In this case I decide on f(*x, *u, gravity, dt)
-    f_x_IMU_input_symbols = list(x_IMU) + list(u_tilde) + [gravity_sym] + [dt]
-    assert_inputs_match(f_x_IMU, f_x_IMU_input_symbols, "f_x_IMU")
-    f_x_IMU_lambdified = sym.lambdify(f_x_IMU_input_symbols, f_x_IMU, "numpy")
+    f_x_imu_input_symbols = list(x_imu) + list(u_tilde) + [gravity_sym] + [dt]
+    assert_inputs_match(f_x_imu, f_x_imu_input_symbols, "f_x_imu")
+    f_x_imu_lambdified = sym.lambdify(f_x_imu_input_symbols, f_x_imu, "numpy")
 
     # error state kinematics jacobian $F_{\delta x}{}$
     # ---
-    F_delta_x = f_delta_x_IMU.jacobian(delta_x_IMU)
-    F_delta_x = F_delta_x.subs({var: 0 for var in delta_x_IMU})
+    F_delta_x = f_delta_x_imu.jacobian(delta_x_imu)
+    F_delta_x = F_delta_x.subs({var: 0 for var in delta_x_imu})
     F_delta_x = sym.simplify(F_delta_x)
     F_delta_x_input_symbols = list(q) + list(a_b) + list(omega_b) + list(u_tilde) + [dt]
     assert_inputs_match(F_delta_x, F_delta_x_input_symbols, "F_delta_x")
@@ -45,15 +45,15 @@ def build_filter_funcs():
 
     # true state in order to perform error injection later
     # ---
-    x_IMU_true_symbols = list(x_IMU) + list(delta_x_IMU)
-    assert_inputs_match(x_IMU_true, x_IMU_true_symbols, "x_IMU_true")
-    x_IMU_true_lambdified = sym.lambdify(x_IMU_true_symbols, x_IMU_true, "numpy")
+    x_imu_true_symbols = list(x_imu) + list(delta_x_imu)
+    assert_inputs_match(x_imu_true, x_imu_true_symbols, "x_imu_true")
+    x_imu_true_lambdified = sym.lambdify(x_imu_true_symbols, x_imu_true, "numpy")
 
     # error noise jacobian $J$
     # ---
     # jacobian of error function with respect to pertubation impulses $j$
     # its always some form of almost identity matrix because of the addititve error
-    J = f_delta_x_IMU.jacobian(delta_x_n_IMU)
+    J = f_delta_x_imu.jacobian(delta_x_n_imu)
     J_lambdified = sym.lambdify([], J, "numpy")
 
     # error noise covariance $Q{}$
@@ -61,7 +61,7 @@ def build_filter_funcs():
     # only temporary implementation approach, this will later need to be more complex
     # as it will not just have purely diagonal elements but the diagonal is comprised of covariancematrices itself
     Q_diagonal = sym.Matrix([])
-    for i in range(len(delta_x_n_IMU)):
+    for i in range(len(delta_x_n_imu)):
         Q_diagonal = sym.Matrix.vstack(Q_diagonal, sym.Matrix([sym.Symbol(f"Q_{i}")]))
     Q = sym.diag(*Q_diagonal)
     Q_lambdified = sym.lambdify(Q_diagonal, Q, "numpy")
@@ -75,8 +75,8 @@ def build_filter_funcs():
     h_lambdified = sym.lambdify(h_input_symbols, h, "numpy")
 
     # measurement jacobian $H$
-    H_delta_x = h.jacobian(x_IMU) * x_IMU_true.jacobian(delta_x_IMU)
-    H_delta_x = H_delta_x.subs({var: 0 for var in delta_x_IMU})
+    H_delta_x = h.jacobian(x_imu) * x_imu_true.jacobian(delta_x_imu)
+    H_delta_x = H_delta_x.subs({var: 0 for var in delta_x_imu})
     H_delta_x = sym.simplify(H_delta_x)
     H_delta_x_input_symbols = list(q) + [gravity_sym]
     assert_inputs_match(H_delta_x, H_delta_x_input_symbols, "H_delta_x")
@@ -92,9 +92,9 @@ def build_filter_funcs():
     V_lambdified = sym.lambdify(V_diagonal, V, "numpy")
 
     return {
-        "f_x_IMU": f_x_IMU_lambdified,
+        "f_x_imu": f_x_imu_lambdified,
         "F_delta_x": F_delta_x_lambdified,
-        "x_IMU_true": x_IMU_true_lambdified,
+        "x_imu_true": x_imu_true_lambdified,
         "J": J_lambdified,
         "Q": Q_lambdified,
         "h": h_lambdified,

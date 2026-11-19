@@ -29,7 +29,7 @@ def _load_history(history_file):
     """Read the filter history CSV and add Euler angles (deg) as extra columns."""
     df = pd.read_csv(history_file)
 
-    quaternion_columns = get_def("IMU orientation")["dims"]
+    quaternion_columns = get_def("imu orientation")["dims"]
     rotations = Rotation.from_quat(df[quaternion_columns].values, scalar_first=True)
     euler = rotations.as_euler("yxz", degrees=True)
     df["roll"], df["pitch"], df["yaw"] = euler[:, 0], euler[:, 1], euler[:, 2]
@@ -43,7 +43,7 @@ def _load_history(history_file):
 
 
 def def_vector_panel(name):
-    """x/y/z components of a quantity known to get_def, e.g. "IMU velocity"."""
+    """x/y/z components of a quantity known to get_def, e.g. "imu velocity"."""
 
     def draw(ax, df):
         for symbol, color in zip(get_def(name)["dims"], COMPONENT_COLORS):
