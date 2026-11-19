@@ -13,15 +13,15 @@ GRAVITY_VEC = [0, 0, g2ms2(-1)]
 
 # system constants
 # \Delta p_{I \to c}
-imu_CAM_TRANSLATION = [0, -0.0013, -0.00662]
+IMU_CAM_TRANSLATION = [0, -0.0013, -0.00662]
 # \Delta q_{I \to c}
-imu_CAM_ROTATION = [np.cos(-np.deg2rad(102) / 2), np.sin(-np.deg2rad(102) / 2), 0, 0]
+IMU_CAM_ROTATION = [np.cos(-np.deg2rad(102) / 2), np.sin(-np.deg2rad(102) / 2), 0, 0]
 
 # length of timewindow at the start for imu calibration in seconds
 CALIBRATION_DT = 3
 
 # estimate of running average over multiple recordings
-imu_SAMPLE_FREQ = 103.5
+IMU_SAMPLE_FREQ = 103.5
 
 
 # ---------------------------------------------------------------------------

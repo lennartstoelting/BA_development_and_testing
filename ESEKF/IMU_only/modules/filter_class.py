@@ -77,12 +77,12 @@ class Filter:
         gyroNSD = np.deg2rad(gyroNSD_deg)  # rad/s/√Hz
 
         # multiplied by bandwidth to get standard deviation
-        sigma_accel = accelNSD * np.sqrt(imu_SAMPLE_FREQ)
-        sigma_gyro = gyroNSD * np.sqrt(imu_SAMPLE_FREQ)
+        sigma_accel = accelNSD * np.sqrt(IMU_SAMPLE_FREQ)
+        sigma_gyro = gyroNSD * np.sqrt(IMU_SAMPLE_FREQ)
 
         # square sigma for variance and multiply by dt^2
-        variance_accel = (sigma_accel**2) * ((1 / imu_SAMPLE_FREQ) ** 2)
-        variance_gyro = (sigma_gyro**2) * ((1 / imu_SAMPLE_FREQ) ** 2)
+        variance_accel = (sigma_accel**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
+        variance_gyro = (sigma_gyro**2) * ((1 / IMU_SAMPLE_FREQ) ** 2)
 
         # vorher hatte ich 1e-5 überall, halt komplett ins blaue geschätzt
         process_noise = {
